@@ -1,0 +1,70 @@
+version: 1
+name: synthetic_twin_v1
+provenance: simulation_parameter:synthetic_twin_v1
+scenarios:
+  B4a:
+    signals:
+      - {name: sensor_17, unit: null, robust_z_threshold: 3.5, threshold_source: simulation_parameter:synthetic_twin_v1}
+      - {name: impedance, unit: null, robust_z_threshold: 3.5, threshold_source: simulation_parameter:synthetic_twin_v1}
+      - {name: thermal, unit: null, robust_z_threshold: 3.5, threshold_source: simulation_parameter:synthetic_twin_v1}
+      - {name: pressure, unit: null, robust_z_threshold: 3.5, threshold_source: simulation_parameter:synthetic_twin_v1}
+    predicates:
+      primary_signals: [sensor_17]
+      corroboration_signals: [impedance, thermal, pressure]
+    rules:
+      equipment_fault:
+        require_all: [has_primary_signal_anomaly]
+        forbid_any: [has_missing_required_evidence]
+        veto_if_any: [has_instrumentation_contradiction]
+    candidate:
+      claim: RF Generator Arc
+      hypothesis_class: equipment_fault
+      # Resolved to the content-addressed evidence ID for EV_sensor_17_anomaly.
+      cited_signals: [sensor_17]
+  B4b:
+    signals:
+      - {name: thermal_sensor, unit: null, robust_z_threshold: 3.5, threshold_source: simulation_parameter:synthetic_twin_v1}
+      - {name: flow, unit: null, robust_z_threshold: 3.5, threshold_source: simulation_parameter:synthetic_twin_v1}
+      - {name: pressure, unit: null, robust_z_threshold: 3.5, threshold_source: simulation_parameter:synthetic_twin_v1}
+    predicates:
+      primary_signals: [thermal_sensor]
+    rules:
+      equipment_fault:
+        require_all: [has_primary_signal_anomaly]
+    candidate:
+      claim: Heater Jacket Degradation
+      hypothesis_class: equipment_fault
+      # Resolves EV_thermal_anomaly to the actual unevaluated thermal evidence.
+      cited_signals: [thermal_sensor]
+  B4c:
+    signals:
+      - {name: met_cd_bias, unit: null, robust_z_threshold: 3.5, threshold_source: simulation_parameter:synthetic_twin_v1}
+      - {name: etch_rf_power, unit: null, robust_z_threshold: 3.5, threshold_source: simulation_parameter:synthetic_twin_v1}
+      - {name: chamber_pressure, unit: null, robust_z_threshold: 3.5, threshold_source: simulation_parameter:synthetic_twin_v1}
+    predicates:
+      primary_signals: [met_cd_bias]
+      temporal_precedence_pairs:
+        - [etch_rf_power, met_cd_bias]
+        - [chamber_pressure, met_cd_bias]
+    rules:
+      upstream_process:
+        require_all: [has_cross_tool_temporal_precedence]
+    candidate:
+      claim: Etch Chamber RF Drift caused CD Defect
+      hypothesis_class: upstream_process
+      cited_signals: [met_cd_bias, etch_rf_power, chamber_pressure]
+  B4d:
+    signals:
+      - {name: chamber_pressure, unit: null, robust_z_threshold: 3.5, threshold_source: simulation_parameter:synthetic_twin_v1}
+      - {name: roughing_line_pressure, unit: null, robust_z_threshold: 3.5, threshold_source: simulation_parameter:synthetic_twin_v1}
+    predicates:
+      primary_signals: [chamber_pressure]
+      corroboration_signals: [roughing_line_pressure]
+    rules:
+      equipment_fault:
+        require_all: [has_primary_signal_anomaly]
+        forbid_any: [has_missing_required_evidence]
+    candidate:
+      claim: Turbomolecular Pump Failure
+      hypothesis_class: equipment_fault
+      cited_signals: [chamber_pressure, roughing_line_pressure]

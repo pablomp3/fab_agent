@@ -1,0 +1,21 @@
+version: 1
+name: synthetic_twin_positive_v1
+provenance: simulation_parameter:synthetic_twin_v1
+scenarios:
+  B4e:
+    signals:
+      - {name: sensor_17, unit: null, robust_z_threshold: 3.5, threshold_source: simulation_parameter:synthetic_twin_v1}
+      - {name: impedance, unit: null, robust_z_threshold: 3.5, threshold_source: simulation_parameter:synthetic_twin_v1}
+      - {name: thermal, unit: null, robust_z_threshold: 3.5, threshold_source: simulation_parameter:synthetic_twin_v1}
+      - {name: pressure, unit: null, robust_z_threshold: 3.5, threshold_source: simulation_parameter:synthetic_twin_v1}
+    predicates:
+      primary_signals: [sensor_17]
+      corroboration_signals: [impedance, thermal, pressure]
+    rules:
+      equipment_fault:
+        require_all: [has_primary_signal_anomaly]
+        forbid_any: [has_missing_required_evidence]
+    candidate:
+      claim: RF Generator Arc
+      hypothesis_class: equipment_fault
+      cited_signals: [sensor_17, impedance, thermal, pressure]
