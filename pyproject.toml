@@ -1,0 +1,31 @@
+[project]
+name = "fab_agent"
+version = "0.1.0"
+description = "FabAgent: Evidence-gated troubleshooting copilot"
+requires-python = ">=3.11"
+dependencies = [
+    "pydantic>=2.0.0",
+    "duckdb>=0.9.0",
+    "numpy>=2.0.0",
+    "pandas>=2.2.0",
+    "scipy>=1.13.0",
+    "PyYAML>=6.0.0",
+]
+
+[project.optional-dependencies]
+dev = ["basedpyright", "ruff", "types-PyYAML"]
+
+[tool.uv]
+package = false
+
+[tool.ruff]
+line-length = 88
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]
+
+[tool.basedpyright]
+typeCheckingMode = "strict"
+pythonVersion = "3.11"
+include = ["src", "tests"]
