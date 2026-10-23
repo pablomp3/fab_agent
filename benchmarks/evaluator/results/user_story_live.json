@@ -1,0 +1,426 @@
+{
+  "gate": "user-story",
+  "llm_calls_recorded": 6,
+  "mode": "live",
+  "scenario_count": 7,
+  "scenarios": [
+    {
+      "action_label": "Collect more data",
+      "analysis_performed": true,
+      "anomaly_count": 0,
+      "detail": null,
+      "draft_yaml_present": false,
+      "engineer_note": "Ion mill alarm during an RF run; the flowcool loop looks abnormal.",
+      "evidence_count": 2,
+      "explanation": "Nothing was proven. Review what moved and what was missing, then decide whether to collect more data.",
+      "fallback_used": false,
+      "final_user_result": {
+        "action_label": "Collect more data",
+        "detail": null,
+        "explanation": "Nothing was proven. Review what moved and what was missing, then decide whether to collect more data.",
+        "outcome": "ANALYSIS_INCONCLUSIVE"
+      },
+      "hypotheses": [
+        {
+          "cited_evidence": [
+            "EV_93EAD10BC5695C7C"
+          ],
+          "hypothesis_class": "equipment_fault",
+          "root_cause": "instrumentation_fault",
+          "status": "INSUFFICIENT"
+        },
+        {
+          "cited_evidence": [
+            "EV_93EAD10BC5695C7C"
+          ],
+          "hypothesis_class": "equipment_fault",
+          "root_cause": "process_drift",
+          "status": "INSUFFICIENT"
+        }
+      ],
+      "input": "/home/pablo/code/nvidia/fab_agent/benchmarks/datasets/phm2018/sample/M02_DC_01_sample.csv",
+      "llm_calls": [
+        {
+          "model": "nvidia/Nemotron-3_5-Lightning",
+          "purpose": "hypothesis",
+          "response": {
+            "hypotheses": [
+              {
+                "cited_evidence": [
+                  "EV_93EAD10BC5695C7C"
+                ],
+                "hypothesis_class": "equipment_fault",
+                "root_cause": "instrumentation_fault",
+                "status": "INSUFFICIENT"
+              },
+              {
+                "cited_evidence": [
+                  "EV_93EAD10BC5695C7C"
+                ],
+                "hypothesis_class": "equipment_fault",
+                "root_cause": "process_drift",
+                "status": "INSUFFICIENT"
+              }
+            ]
+          },
+          "role": "SYNTHESIS"
+        }
+      ],
+      "mode": "safe",
+      "model_called": true,
+      "outcome": "ANALYSIS_INCONCLUSIVE",
+      "scenario_id": "known_phm_flowcool",
+      "suggested_next_action": "COLLECT_MORE_DATA",
+      "title": "Known tool export (schema matches)",
+      "triage": {
+        "config": "ion_mill_phm18",
+        "matched_signals": [
+          "FLOWCOOLFLOWRATE",
+          "FLOWCOOLPRESSURE"
+        ],
+        "result": "matched",
+        "scenario": "flowcool",
+        "signal_coverage": 1.0
+      },
+      "trigger": "User uploads a PHM ion-mill export the fab already has a config for."
+    },
+    {
+      "action_label": "Review the draft mapping",
+      "analysis_performed": true,
+      "anomaly_count": 1,
+      "detail": null,
+      "draft_yaml_present": true,
+      "engineer_note": "New tool export, no schema configured yet. Please look at the signals.",
+      "evidence_count": 3,
+      "explanation": "I inferred these channels from names and statistics. This is unverified, so review the draft config before trusting any result.",
+      "fallback_used": true,
+      "final_user_result": {
+        "action_label": "Review the draft mapping",
+        "detail": null,
+        "explanation": "I inferred these channels from names and statistics. This is unverified, so review the draft config before trusting any result.",
+        "outcome": "EXPERIMENTAL_UNVERIFIED_MAPPING"
+      },
+      "hypotheses": [
+        {
+          "cited_evidence": [
+            "EV_17F1860AD17CAED5"
+          ],
+          "hypothesis_class": "experimental_unverified",
+          "root_cause": "process_drift",
+          "status": "SUPPORTED"
+        }
+      ],
+      "input": "/tmp/tmpm0xrdz4u/unknown_named_tool.csv",
+      "llm_calls": [
+        {
+          "model": "nvidia/Nemotron-3_5-Lightning",
+          "purpose": "signal_mapping",
+          "rejected": false,
+          "response": {
+            "proposed_relationships": [
+              {
+                "corroborating": [
+                  "Chamber_Pressure_Pa",
+                  "Coolant_Flow_sccm"
+                ],
+                "primary": "RF_Reflect_Power_W"
+              }
+            ],
+            "proposed_signals": [
+              {
+                "column": "RF_Reflect_Power_W",
+                "role_guess": "input_power",
+                "unit_guess": "W"
+              },
+              {
+                "column": "Chamber_Pressure_Pa",
+                "role_guess": "process_pressure",
+                "unit_guess": "Pa"
+              },
+              {
+                "column": "Coolant_Flow_sccm",
+                "role_guess": "coolant_flow",
+                "unit_guess": "sccm"
+              }
+            ]
+          },
+          "role": "SYNTHESIS"
+        },
+        {
+          "model": "nvidia/Nemotron-3_5-Lightning",
+          "purpose": "hypothesis",
+          "response": {
+            "hypotheses": [
+              {
+                "cited_evidence": [
+                  "EV_17F1860AD17CAED5"
+                ],
+                "hypothesis_class": "experimental_unverified",
+                "root_cause": "process_drift",
+                "status": "SUPPORTED"
+              }
+            ]
+          },
+          "role": "SYNTHESIS"
+        }
+      ],
+      "mode": "experimental",
+      "model_called": true,
+      "outcome": "EXPERIMENTAL_UNVERIFIED_MAPPING",
+      "scenario_id": "unknown_named_tool",
+      "suggested_next_action": "REVIEW_DRAFT_MAPPING",
+      "title": "Unknown tool, readable column names",
+      "triage": {
+        "result": "no_schema_fell_back_to_experimental"
+      },
+      "trigger": "New tool export; no config matches the headers."
+    },
+    {
+      "action_label": "Review the draft mapping",
+      "analysis_performed": true,
+      "anomaly_count": 1,
+      "detail": null,
+      "draft_yaml_present": true,
+      "engineer_note": "Export from a tool with meaningless column names; low-integration look.",
+      "evidence_count": 3,
+      "explanation": "I inferred these channels from names and statistics. This is unverified, so review the draft config before trusting any result.",
+      "fallback_used": true,
+      "final_user_result": {
+        "action_label": "Review the draft mapping",
+        "detail": null,
+        "explanation": "I inferred these channels from names and statistics. This is unverified, so review the draft config before trusting any result.",
+        "outcome": "EXPERIMENTAL_UNVERIFIED_MAPPING"
+      },
+      "hypotheses": [
+        {
+          "cited_evidence": [
+            "EV_C2A6AA487C337D42"
+          ],
+          "hypothesis_class": "experimental_unverified",
+          "root_cause": "instrumentation_fault",
+          "status": "SUPPORTED"
+        }
+      ],
+      "input": "/tmp/tmpm0xrdz4u/opaque_export.csv",
+      "llm_calls": [
+        {
+          "model": "nvidia/Nemotron-3_5-Lightning",
+          "purpose": "signal_mapping",
+          "rejected": false,
+          "response": {
+            "proposed_relationships": [
+              {
+                "corroborating": [
+                  "b",
+                  "c"
+                ],
+                "primary": "a"
+              }
+            ],
+            "proposed_signals": [
+              {
+                "column": "a",
+                "role_guess": "voltage",
+                "unit_guess": "V"
+              },
+              {
+                "column": "b",
+                "role_guess": "current",
+                "unit_guess": "A"
+              },
+              {
+                "column": "c",
+                "role_guess": "power",
+                "unit_guess": "W"
+              }
+            ]
+          },
+          "role": "SYNTHESIS"
+        },
+        {
+          "model": "nvidia/Nemotron-3_5-Lightning",
+          "purpose": "hypothesis",
+          "response": {
+            "hypotheses": [
+              {
+                "cited_evidence": [
+                  "EV_C2A6AA487C337D42"
+                ],
+                "hypothesis_class": "experimental_unverified",
+                "root_cause": "instrumentation_fault",
+                "status": "SUPPORTED"
+              }
+            ]
+          },
+          "role": "SYNTHESIS"
+        }
+      ],
+      "mode": "experimental",
+      "model_called": true,
+      "outcome": "EXPERIMENTAL_UNVERIFIED_MAPPING",
+      "scenario_id": "unknown_opaque_tool",
+      "suggested_next_action": "REVIEW_DRAFT_MAPPING",
+      "title": "Unknown tool, opaque column names",
+      "triage": {
+        "result": "no_schema_fell_back_to_experimental"
+      },
+      "trigger": "Columns are a/b/c, so only statistics can map them."
+    },
+    {
+      "action_label": "Check the contradiction",
+      "analysis_performed": true,
+      "anomaly_count": 1,
+      "detail": null,
+      "draft_yaml_present": false,
+      "engineer_note": "Sensor spike on the RF generator; other channels look nominal.",
+      "evidence_count": 4,
+      "explanation": "Two signals disagree, so the proposed cause is rejected. Check whether a sensor is faulty or the channels are mislabeled.",
+      "fallback_used": false,
+      "final_user_result": {
+        "action_label": "Check the contradiction",
+        "detail": null,
+        "explanation": "Two signals disagree, so the proposed cause is rejected. Check whether a sensor is faulty or the channels are mislabeled.",
+        "outcome": "ANALYSIS_CONTRADICTED"
+      },
+      "hypotheses": [
+        {
+          "cited_evidence": [
+            "EV_6543D73C667AFB2B"
+          ],
+          "hypothesis_class": "equipment_fault",
+          "root_cause": "instrumentation_fault",
+          "status": "VETOED"
+        }
+      ],
+      "input": "/home/pablo/code/nvidia/fab_agent/benchmarks/synthetic_twin/cases/B4a/telemetry.csv",
+      "llm_calls": [
+        {
+          "model": "nvidia/Nemotron-3_5-Lightning",
+          "purpose": "hypothesis",
+          "response": {
+            "hypotheses": [
+              {
+                "cited_evidence": [
+                  "EV_6543D73C667AFB2B"
+                ],
+                "hypothesis_class": "equipment_fault",
+                "root_cause": "instrumentation_fault",
+                "status": "VETOED"
+              }
+            ]
+          },
+          "role": "SYNTHESIS"
+        }
+      ],
+      "mode": "safe",
+      "model_called": true,
+      "outcome": "ANALYSIS_CONTRADICTED",
+      "scenario_id": "synthetic_b4a",
+      "suggested_next_action": "REVIEW_CONTRADICTION",
+      "title": "Synthetic adversarial case (contradiction)",
+      "triage": {
+        "config": "synthetic_twin_v1",
+        "matched_signals": [
+          "sensor_17",
+          "impedance",
+          "thermal",
+          "pressure"
+        ],
+        "result": "matched",
+        "scenario": "B4a",
+        "signal_coverage": 1.0
+      },
+      "trigger": "Known synthetic scenario with a hard instrumentation contradiction."
+    },
+    {
+      "action_label": "Re-export the file",
+      "analysis_performed": false,
+      "anomaly_count": 0,
+      "detail": "The file is not readable as a CSV (encoding or delimiter problem); re-export it as a UTF-8 CSV.",
+      "draft_yaml_present": false,
+      "engineer_note": "Please analyze this export.",
+      "evidence_count": 0,
+      "explanation": "The file is not readable as a CSV (an encoding or delimiter problem). Re-export it as a UTF-8 CSV.",
+      "fallback_used": false,
+      "final_user_result": {
+        "action_label": "Re-export the file",
+        "detail": "The file is not readable as a CSV (encoding or delimiter problem); re-export it as a UTF-8 CSV.",
+        "explanation": "The file is not readable as a CSV (an encoding or delimiter problem). Re-export it as a UTF-8 CSV.",
+        "outcome": "INPUT_MALFORMED"
+      },
+      "hypotheses": [],
+      "input": "/tmp/tmpm0xrdz4u/broken.csv",
+      "llm_calls": [],
+      "mode": "safe",
+      "model_called": false,
+      "outcome": "INPUT_MALFORMED",
+      "scenario_id": "malformed_csv",
+      "suggested_next_action": "FIX_FILE_FORMAT",
+      "title": "Malformed CSV",
+      "triage": {
+        "result": "no_schema"
+      },
+      "trigger": "The file is not parseable."
+    },
+    {
+      "action_label": "Provide data rows",
+      "analysis_performed": false,
+      "anomaly_count": 0,
+      "detail": "The file has a header but no readings; nothing to check.",
+      "draft_yaml_present": false,
+      "engineer_note": "Please analyze this export.",
+      "evidence_count": 0,
+      "explanation": "The file has a header but no readings, so there is nothing to check.",
+      "fallback_used": false,
+      "final_user_result": {
+        "action_label": "Provide data rows",
+        "detail": "The file has a header but no readings; nothing to check.",
+        "explanation": "The file has a header but no readings, so there is nothing to check.",
+        "outcome": "NO_DATA_ROWS"
+      },
+      "hypotheses": [],
+      "input": "/tmp/tmpm0xrdz4u/header_only.csv",
+      "llm_calls": [],
+      "mode": "safe",
+      "model_called": false,
+      "outcome": "NO_DATA_ROWS",
+      "scenario_id": "header_only_csv",
+      "suggested_next_action": "PROVIDE_MORE_DATA",
+      "title": "Header-only CSV",
+      "triage": {
+        "result": "no_schema"
+      },
+      "trigger": "The file has a header but no readings."
+    },
+    {
+      "action_label": "Fix the file path",
+      "analysis_performed": false,
+      "anomaly_count": 0,
+      "detail": "Input CSV is not readable; review the export path.",
+      "draft_yaml_present": false,
+      "engineer_note": "Please analyze this export.",
+      "evidence_count": 0,
+      "explanation": "I could not open the file you gave me. Check the path and permissions, then upload it again.",
+      "fallback_used": false,
+      "final_user_result": {
+        "action_label": "Fix the file path",
+        "detail": "Input CSV is not readable; review the export path.",
+        "explanation": "I could not open the file you gave me. Check the path and permissions, then upload it again.",
+        "outcome": "INPUT_UNREADABLE"
+      },
+      "hypotheses": [],
+      "input": "/tmp/tmpm0xrdz4u/does-not-exist.csv",
+      "llm_calls": [],
+      "mode": "safe",
+      "model_called": false,
+      "outcome": "INPUT_UNREADABLE",
+      "scenario_id": "missing_file",
+      "suggested_next_action": "FIX_INPUT_FILE",
+      "title": "Missing file",
+      "triage": {
+        "result": "no_schema"
+      },
+      "trigger": "The path does not exist."
+    }
+  ]
+}

@@ -1,0 +1,79 @@
+{
+  "evidence_limit_bytes": 2048,
+  "gate": "W5.5",
+  "max_tokens": 256,
+  "points": [
+    {
+      "channels": 1,
+      "evidence_bytes": 169,
+      "evidence_ok": true,
+      "payload_ok": true,
+      "request_bytes": 1478
+    },
+    {
+      "channels": 2,
+      "evidence_bytes": 324,
+      "evidence_ok": true,
+      "payload_ok": true,
+      "request_bytes": 1655
+    },
+    {
+      "channels": 4,
+      "evidence_bytes": 634,
+      "evidence_ok": true,
+      "payload_ok": true,
+      "request_bytes": 2009
+    },
+    {
+      "channels": 6,
+      "evidence_bytes": 944,
+      "evidence_ok": true,
+      "payload_ok": true,
+      "request_bytes": 2363
+    },
+    {
+      "channels": 8,
+      "evidence_bytes": 1254,
+      "evidence_ok": true,
+      "payload_ok": true,
+      "request_bytes": 2717
+    },
+    {
+      "channels": 10,
+      "evidence_bytes": 1564,
+      "evidence_ok": true,
+      "payload_ok": true,
+      "request_bytes": 3071
+    },
+    {
+      "channels": 12,
+      "evidence_bytes": 1874,
+      "evidence_ok": true,
+      "payload_ok": true,
+      "request_bytes": 3425
+    },
+    {
+      "channels": 14,
+      "evidence_bytes": 2184,
+      "evidence_ok": false,
+      "payload_ok": false,
+      "request_bytes": null
+    },
+    {
+      "channels": 16,
+      "evidence_bytes": 2494,
+      "evidence_ok": false,
+      "payload_ok": false,
+      "request_bytes": null
+    },
+    {
+      "channels": 20,
+      "evidence_bytes": 3114,
+      "evidence_ok": false,
+      "payload_ok": false,
+      "request_bytes": null
+    }
+  ],
+  "probe": "single_request_channel_scaling",
+  "request_limit_bytes": 8192
+}

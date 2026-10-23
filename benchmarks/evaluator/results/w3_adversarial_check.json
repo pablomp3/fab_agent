@@ -1,0 +1,241 @@
+{
+  "cases": [
+    {
+      "candidate": {
+        "cited_evidence": [
+          "EV_6543D73C667AFB2B"
+        ],
+        "claim": "RF Generator Arc",
+        "hypothesis_class": "equipment_fault"
+      },
+      "case_id": "B4a",
+      "constraints": {
+        "forbidden": [
+          "has_missing_required_evidence"
+        ],
+        "satisfied": [
+          "has_primary_signal_anomaly"
+        ],
+        "unmet": [],
+        "vetoed": [
+          "has_instrumentation_contradiction"
+        ]
+      },
+      "evidence": [
+        {
+          "evidence_id": "EV_6543D73C667AFB2B",
+          "kind": "SENSOR_ANOMALY",
+          "provenance": "/home/pablo/code/nvidia/fab_agent/benchmarks/synthetic_twin/cases/B4a/telemetry.csv rows 1-120 (120 observations) source=simulation_parameter:synthetic_twin_v1",
+          "signal": "sensor_17",
+          "unit": null,
+          "value": 16.225015560496328
+        },
+        {
+          "evidence_id": "EV_7E789DF601101150",
+          "kind": "SENSOR_NOMINAL",
+          "provenance": "/home/pablo/code/nvidia/fab_agent/benchmarks/synthetic_twin/cases/B4a/telemetry.csv rows 1-120 (120 observations) source=simulation_parameter:synthetic_twin_v1",
+          "signal": "impedance",
+          "unit": null,
+          "value": 0.9989989999268193
+        },
+        {
+          "evidence_id": "EV_64C2CBD9DF3E9D41",
+          "kind": "SENSOR_NOMINAL",
+          "provenance": "/home/pablo/code/nvidia/fab_agent/benchmarks/synthetic_twin/cases/B4a/telemetry.csv rows 1-120 (120 observations) source=simulation_parameter:synthetic_twin_v1",
+          "signal": "thermal",
+          "unit": null,
+          "value": 0.9989990000460331
+        },
+        {
+          "evidence_id": "EV_4876F037859A989A",
+          "kind": "SENSOR_NOMINAL",
+          "provenance": "/home/pablo/code/nvidia/fab_agent/benchmarks/synthetic_twin/cases/B4a/telemetry.csv rows 1-120 (120 observations) source=simulation_parameter:synthetic_twin_v1",
+          "signal": "pressure",
+          "unit": null,
+          "value": 0.9989990000350704
+        }
+      ],
+      "passed": true,
+      "predicates": {
+        "has_correlated_actuator_response": false,
+        "has_cross_tool_temporal_precedence": false,
+        "has_expected_spatial_signature": false,
+        "has_instrumentation_contradiction": true,
+        "has_manual_or_prior_case_support": false,
+        "has_missing_required_evidence": false,
+        "has_primary_signal_anomaly": true
+      },
+      "suggested_next_action": "ESCALATE_TO_ENGINEER",
+      "verdict": "VETOED"
+    },
+    {
+      "candidate": {
+        "cited_evidence": [
+          "EV_4D3C8F11DDD7D6F0"
+        ],
+        "claim": "Heater Jacket Degradation",
+        "hypothesis_class": "equipment_fault"
+      },
+      "case_id": "B4b",
+      "constraints": {
+        "forbidden": [],
+        "satisfied": [],
+        "unmet": [
+          "has_primary_signal_anomaly"
+        ],
+        "vetoed": []
+      },
+      "evidence": [
+        {
+          "evidence_id": "EV_4D3C8F11DDD7D6F0",
+          "kind": "NOT_EVALUATED",
+          "provenance": "/home/pablo/code/nvidia/fab_agent/benchmarks/synthetic_twin/cases/B4b/telemetry.csv rows 1-120 (120 observations) source=simulation_parameter:synthetic_twin_v1",
+          "signal": "thermal_sensor",
+          "unit": null,
+          "value": null
+        },
+        {
+          "evidence_id": "EV_D0E7411296F0CE1D",
+          "kind": "SENSOR_NOMINAL",
+          "provenance": "/home/pablo/code/nvidia/fab_agent/benchmarks/synthetic_twin/cases/B4b/telemetry.csv rows 1-120 (120 observations) source=simulation_parameter:synthetic_twin_v1",
+          "signal": "flow",
+          "unit": null,
+          "value": 2.1264366453891173
+        },
+        {
+          "evidence_id": "EV_5CBB69F5E3914114",
+          "kind": "SENSOR_NOMINAL",
+          "provenance": "/home/pablo/code/nvidia/fab_agent/benchmarks/synthetic_twin/cases/B4b/telemetry.csv rows 1-120 (120 observations) source=simulation_parameter:synthetic_twin_v1",
+          "signal": "pressure",
+          "unit": null,
+          "value": 3.3584931978876993
+        }
+      ],
+      "passed": true,
+      "predicates": {
+        "has_correlated_actuator_response": false,
+        "has_cross_tool_temporal_precedence": false,
+        "has_expected_spatial_signature": false,
+        "has_instrumentation_contradiction": false,
+        "has_manual_or_prior_case_support": false,
+        "has_missing_required_evidence": true,
+        "has_primary_signal_anomaly": false
+      },
+      "suggested_next_action": "ESCALATE_TO_ENGINEER",
+      "verdict": "INSUFFICIENT"
+    },
+    {
+      "candidate": {
+        "cited_evidence": [
+          "EV_4E1D3DA2A2D92678",
+          "EV_9442BC1B50F82DD1",
+          "EV_91757CA0A20801D4"
+        ],
+        "claim": "Etch Chamber RF Drift caused CD Defect",
+        "hypothesis_class": "upstream_process"
+      },
+      "case_id": "B4c",
+      "constraints": {
+        "forbidden": [],
+        "satisfied": [],
+        "unmet": [
+          "has_cross_tool_temporal_precedence"
+        ],
+        "vetoed": []
+      },
+      "evidence": [
+        {
+          "evidence_id": "EV_4E1D3DA2A2D92678",
+          "kind": "SENSOR_ANOMALY",
+          "provenance": "/home/pablo/code/nvidia/fab_agent/benchmarks/synthetic_twin/cases/B4c/telemetry.csv rows 1-120 (120 observations) source=simulation_parameter:synthetic_twin_v1",
+          "signal": "met_cd_bias",
+          "unit": null,
+          "value": 4.200000000165211
+        },
+        {
+          "evidence_id": "EV_9442BC1B50F82DD1",
+          "kind": "SENSOR_NOMINAL",
+          "provenance": "/home/pablo/code/nvidia/fab_agent/benchmarks/synthetic_twin/cases/B4c/telemetry.csv rows 1-120 (120 observations) source=simulation_parameter:synthetic_twin_v1",
+          "signal": "etch_rf_power",
+          "unit": null,
+          "value": 1.1989990000381698
+        },
+        {
+          "evidence_id": "EV_91757CA0A20801D4",
+          "kind": "SENSOR_NOMINAL",
+          "provenance": "/home/pablo/code/nvidia/fab_agent/benchmarks/synthetic_twin/cases/B4c/telemetry.csv rows 1-120 (120 observations) source=simulation_parameter:synthetic_twin_v1",
+          "signal": "chamber_pressure",
+          "unit": null,
+          "value": 1.1989990000582291
+        }
+      ],
+      "passed": true,
+      "predicates": {
+        "has_correlated_actuator_response": false,
+        "has_cross_tool_temporal_precedence": false,
+        "has_expected_spatial_signature": false,
+        "has_instrumentation_contradiction": false,
+        "has_manual_or_prior_case_support": false,
+        "has_missing_required_evidence": false,
+        "has_primary_signal_anomaly": true
+      },
+      "suggested_next_action": "ESCALATE_TO_ENGINEER",
+      "verdict": "INSUFFICIENT"
+    },
+    {
+      "candidate": {
+        "cited_evidence": [
+          "EV_06C67AEC39D8065F",
+          "EV_B3D26B6BB30AE794"
+        ],
+        "claim": "Turbomolecular Pump Failure",
+        "hypothesis_class": "equipment_fault"
+      },
+      "case_id": "B4d",
+      "constraints": {
+        "forbidden": [
+          "has_missing_required_evidence"
+        ],
+        "satisfied": [
+          "has_primary_signal_anomaly"
+        ],
+        "unmet": [],
+        "vetoed": []
+      },
+      "evidence": [
+        {
+          "evidence_id": "EV_06C67AEC39D8065F",
+          "kind": "SENSOR_ANOMALY",
+          "provenance": "/home/pablo/code/nvidia/fab_agent/benchmarks/synthetic_twin/cases/B4d/telemetry.csv rows 1-120 (120 observations) source=simulation_parameter:synthetic_twin_v1",
+          "signal": "chamber_pressure",
+          "unit": null,
+          "value": 6.797221517397262
+        },
+        {
+          "evidence_id": "EV_B3D26B6BB30AE794",
+          "kind": "MISSING_CHANNEL",
+          "provenance": "/home/pablo/code/nvidia/fab_agent/benchmarks/synthetic_twin/cases/B4d/telemetry.csv source=simulation_parameter:synthetic_twin_v1",
+          "signal": "roughing_line_pressure",
+          "unit": null,
+          "value": null
+        }
+      ],
+      "passed": true,
+      "predicates": {
+        "has_correlated_actuator_response": false,
+        "has_cross_tool_temporal_precedence": false,
+        "has_expected_spatial_signature": false,
+        "has_instrumentation_contradiction": false,
+        "has_manual_or_prior_case_support": false,
+        "has_missing_required_evidence": true,
+        "has_primary_signal_anomaly": true
+      },
+      "suggested_next_action": "ESCALATE_TO_ENGINEER",
+      "verdict": "INSUFFICIENT"
+    }
+  ],
+  "configuration": "/home/pablo/code/nvidia/fab_agent/config/sensor_relations/synthetic_twin.yaml",
+  "gate": "W3",
+  "llm_calls": 0,
+  "passed": true
+}

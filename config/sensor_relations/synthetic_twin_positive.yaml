@@ -19,3 +19,7 @@ scenarios:
       claim: RF Generator Arc
       hypothesis_class: equipment_fault
       cited_signals: [sensor_17, impedance, thermal, pressure]
+      root_cause: equipment_fault
+      failure_mode: Simulated RF generator arc.
+      mechanism: Synthetic positive control; the arc signature is injected by the twin generator.
+    supported_action: INSPECT_COMPONENT

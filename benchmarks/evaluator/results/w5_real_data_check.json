@@ -1,0 +1,689 @@
+{
+  "gate": "W5",
+  "suites": [
+    {
+      "cases": [
+        {
+          "candidate": {
+            "cited_evidence": [
+              "EV_123DDDFE649F4A4B",
+              "EV_A3A440E1E50C13D1"
+            ],
+            "claim": "flowcool subsystem fault",
+            "hypothesis_class": "equipment_fault"
+          },
+          "case_id": "M02_DC_01",
+          "constraints": {
+            "forbidden": [],
+            "satisfied": [
+              "has_primary_signal_anomaly"
+            ],
+            "unmet": [],
+            "vetoed": []
+          },
+          "evidence": [
+            {
+              "evidence_id": "EV_123DDDFE649F4A4B",
+              "kind": "SENSOR_ANOMALY",
+              "provenance": "/home/pablo/code/nvidia/fab_agent/benchmarks/datasets/phm2018/processed/01_M02_DC_score.csv rows 1-1703514 (1703514 observations) source=standard_robust_mad_multiplier=3.5;nominal_baseline:/home/pablo/code/nvidia/fab_agent/benchmarks/datasets/phm2018/processed/01_M02_DC_score_nominal.csv",
+              "signal": "FLOWCOOLFLOWRATE",
+              "unit": null,
+              "value": 591.3458382254959
+            },
+            {
+              "evidence_id": "EV_A3A440E1E50C13D1",
+              "kind": "SENSOR_ANOMALY",
+              "provenance": "/home/pablo/code/nvidia/fab_agent/benchmarks/datasets/phm2018/processed/01_M02_DC_score.csv rows 1-1703514 (1703514 observations) source=standard_robust_mad_multiplier=3.5;nominal_baseline:/home/pablo/code/nvidia/fab_agent/benchmarks/datasets/phm2018/processed/01_M02_DC_score_nominal.csv",
+              "signal": "FLOWCOOLPRESSURE",
+              "unit": null,
+              "value": 9.80831429461485
+            },
+            {
+              "evidence_id": "EV_E9E1D4D2AA62F305",
+              "kind": "SENSOR_ANOMALY",
+              "provenance": "/home/pablo/code/nvidia/fab_agent/benchmarks/datasets/phm2018/processed/01_M02_DC_score.csv rows 1-1703514 (1703514 observations) source=standard_robust_mad_multiplier=3.5;nominal_baseline:/home/pablo/code/nvidia/fab_agent/benchmarks/datasets/phm2018/processed/01_M02_DC_score_nominal.csv",
+              "signal": "IONGAUGEPRESSURE",
+              "unit": null,
+              "value": 946.4070841282775
+            },
+            {
+              "evidence_id": "EV_89D5C92011B8B302",
+              "kind": "SENSOR_ANOMALY",
+              "provenance": "/home/pablo/code/nvidia/fab_agent/benchmarks/datasets/phm2018/processed/01_M02_DC_score.csv rows 1-1703514 (1703514 observations) source=standard_robust_mad_multiplier=3.5;nominal_baseline:/home/pablo/code/nvidia/fab_agent/benchmarks/datasets/phm2018/processed/01_M02_DC_score_nominal.csv",
+              "signal": "ETCHBEAMVOLTAGE",
+              "unit": null,
+              "value": 4.203283286590125
+            },
+            {
+              "evidence_id": "EV_8A2191ED851FABE0",
+              "kind": "SENSOR_ANOMALY",
+              "provenance": "/home/pablo/code/nvidia/fab_agent/benchmarks/datasets/phm2018/processed/01_M02_DC_score.csv rows 1-1703514 (1703514 observations) source=standard_robust_mad_multiplier=3.5;nominal_baseline:/home/pablo/code/nvidia/fab_agent/benchmarks/datasets/phm2018/processed/01_M02_DC_score_nominal.csv",
+              "signal": "ETCHBEAMCURRENT",
+              "unit": null,
+              "value": 7.1806809771569196
+            },
+            {
+              "evidence_id": "EV_8A504DF9C88E98A1",
+              "kind": "SENSOR_NOMINAL",
+              "provenance": "/home/pablo/code/nvidia/fab_agent/benchmarks/datasets/phm2018/processed/01_M02_DC_score.csv rows 1-1703514 (1703514 observations) source=standard_robust_mad_multiplier=3.5;nominal_baseline:/home/pablo/code/nvidia/fab_agent/benchmarks/datasets/phm2018/processed/01_M02_DC_score_nominal.csv",
+              "signal": "ETCHSUPPRESSORVOLTAGE",
+              "unit": null,
+              "value": 3.1541086053813006
+            },
+            {
+              "evidence_id": "EV_75B382F931320ADA",
+              "kind": "SENSOR_ANOMALY",
+              "provenance": "/home/pablo/code/nvidia/fab_agent/benchmarks/datasets/phm2018/processed/01_M02_DC_score.csv rows 1-1703514 (1703514 observations) source=standard_robust_mad_multiplier=3.5;nominal_baseline:/home/pablo/code/nvidia/fab_agent/benchmarks/datasets/phm2018/processed/01_M02_DC_score_nominal.csv",
+              "signal": "ETCHSUPPRESSORCURRENT",
+              "unit": null,
+              "value": 47.472749115695905
+            }
+          ],
+          "passed": true,
+          "predicates": {
+            "has_correlated_actuator_response": false,
+            "has_cross_tool_temporal_precedence": false,
+            "has_expected_spatial_signature": false,
+            "has_instrumentation_contradiction": false,
+            "has_manual_or_prior_case_support": false,
+            "has_missing_required_evidence": false,
+            "has_primary_signal_anomaly": true
+          },
+          "suggested_next_action": "INSPECT_COMPONENT",
+          "verdict": "SUPPORTED"
+        }
+      ],
+      "configuration": "/home/pablo/code/nvidia/fab_agent/config/sensor_relations/ion_mill_phm18.yaml",
+      "passed": true,
+      "suite": "PHM 2018 Ion Mill"
+    },
+    {
+      "cases": [
+        {
+          "candidate": {
+            "cited_evidence": [
+              "EV_79965DB8B46647BF",
+              "EV_09214040313BDD9F",
+              "EV_0A2B52DE0CC68212"
+            ],
+            "claim": "A feed disturbance",
+            "hypothesis_class": "feed_disturbance"
+          },
+          "case_id": "IDV1",
+          "constraints": {
+            "forbidden": [],
+            "satisfied": [
+              "has_primary_signal_anomaly"
+            ],
+            "unmet": [],
+            "vetoed": []
+          },
+          "evidence": [
+            {
+              "evidence_id": "EV_79965DB8B46647BF",
+              "kind": "SENSOR_ANOMALY",
+              "provenance": "/home/pablo/code/nvidia/fab_agent/benchmarks/datasets/tep/processed/IDV1.csv rows 1-301 (301 observations) source=standard_robust_mad_multiplier=3.5;nominal_baseline:/home/pablo/code/nvidia/fab_agent/benchmarks/datasets/tep/processed/IDV1_nominal.csv",
+              "signal": "XMEAS(1)",
+              "unit": "kscmh",
+              "value": 30.62421138508024
+            },
+            {
+              "evidence_id": "EV_09214040313BDD9F",
+              "kind": "SENSOR_ANOMALY",
+              "provenance": "/home/pablo/code/nvidia/fab_agent/benchmarks/datasets/tep/processed/IDV1.csv rows 1-301 (301 observations) source=standard_robust_mad_multiplier=3.5;nominal_baseline:/home/pablo/code/nvidia/fab_agent/benchmarks/datasets/tep/processed/IDV1_nominal.csv",
+              "signal": "XMV(3)",
+              "unit": "%",
+              "value": 30.499670351102207
+            },
+            {
+              "evidence_id": "EV_0A2B52DE0CC68212",
+              "kind": "SENSOR_ANOMALY",
+              "provenance": "/home/pablo/code/nvidia/fab_agent/benchmarks/datasets/tep/processed/IDV1.csv rows 1-301 (301 observations) source=standard_robust_mad_multiplier=3.5;nominal_baseline:/home/pablo/code/nvidia/fab_agent/benchmarks/datasets/tep/processed/IDV1_nominal.csv",
+              "signal": "XMEAS(7)",
+              "unit": "kPa",
+              "value": 41.57273434620571
+            }
+          ],
+          "passed": true,
+          "predicates": {
+            "has_correlated_actuator_response": false,
+            "has_cross_tool_temporal_precedence": false,
+            "has_expected_spatial_signature": false,
+            "has_instrumentation_contradiction": false,
+            "has_manual_or_prior_case_support": false,
+            "has_missing_required_evidence": false,
+            "has_primary_signal_anomaly": true
+          },
+          "suggested_next_action": "ESCALATE_TO_ENGINEER",
+          "verdict": "SUPPORTED"
+        },
+        {
+          "candidate": {
+            "cited_evidence": [
+              "EV_18BFC5D1A9DAB7C7",
+              "EV_6FE4C35E1D665981",
+              "EV_8E652930790330C7"
+            ],
+            "claim": "A feed disturbance",
+            "hypothesis_class": "feed_disturbance"
+          },
+          "case_id": "IDV2",
+          "constraints": {
+            "forbidden": [],
+            "satisfied": [
+              "has_primary_signal_anomaly"
+            ],
+            "unmet": [],
+            "vetoed": []
+          },
+          "evidence": [
+            {
+              "evidence_id": "EV_18BFC5D1A9DAB7C7",
+              "kind": "SENSOR_ANOMALY",
+              "provenance": "/home/pablo/code/nvidia/fab_agent/benchmarks/datasets/tep/processed/IDV2.csv rows 1-301 (301 observations) source=standard_robust_mad_multiplier=3.5;nominal_baseline:/home/pablo/code/nvidia/fab_agent/benchmarks/datasets/tep/processed/IDV2_nominal.csv",
+              "signal": "XMEAS(1)",
+              "unit": "kscmh",
+              "value": 5.242283065314266
+            },
+            {
+              "evidence_id": "EV_6FE4C35E1D665981",
+              "kind": "SENSOR_ANOMALY",
+              "provenance": "/home/pablo/code/nvidia/fab_agent/benchmarks/datasets/tep/processed/IDV2.csv rows 1-301 (301 observations) source=standard_robust_mad_multiplier=3.5;nominal_baseline:/home/pablo/code/nvidia/fab_agent/benchmarks/datasets/tep/processed/IDV2_nominal.csv",
+              "signal": "XMV(3)",
+              "unit": "%",
+              "value": 5.323030015060261
+            },
+            {
+              "evidence_id": "EV_8E652930790330C7",
+              "kind": "SENSOR_ANOMALY",
+              "provenance": "/home/pablo/code/nvidia/fab_agent/benchmarks/datasets/tep/processed/IDV2.csv rows 1-301 (301 observations) source=standard_robust_mad_multiplier=3.5;nominal_baseline:/home/pablo/code/nvidia/fab_agent/benchmarks/datasets/tep/processed/IDV2_nominal.csv",
+              "signal": "XMEAS(7)",
+              "unit": "kPa",
+              "value": 7.252726096860791
+            }
+          ],
+          "passed": true,
+          "predicates": {
+            "has_correlated_actuator_response": false,
+            "has_cross_tool_temporal_precedence": false,
+            "has_expected_spatial_signature": false,
+            "has_instrumentation_contradiction": false,
+            "has_manual_or_prior_case_support": false,
+            "has_missing_required_evidence": false,
+            "has_primary_signal_anomaly": true
+          },
+          "suggested_next_action": "ESCALATE_TO_ENGINEER",
+          "verdict": "SUPPORTED"
+        },
+        {
+          "candidate": {
+            "cited_evidence": [
+              "EV_BB46001FEC30E02F",
+              "EV_0F1732C2B80A9CD1",
+              "EV_EEEE563381CE3A52"
+            ],
+            "claim": "A feed disturbance",
+            "hypothesis_class": "feed_disturbance"
+          },
+          "case_id": "IDV6",
+          "constraints": {
+            "forbidden": [],
+            "satisfied": [
+              "has_primary_signal_anomaly"
+            ],
+            "unmet": [],
+            "vetoed": []
+          },
+          "evidence": [
+            {
+              "evidence_id": "EV_BB46001FEC30E02F",
+              "kind": "SENSOR_ANOMALY",
+              "provenance": "/home/pablo/code/nvidia/fab_agent/benchmarks/datasets/tep/processed/IDV6.csv rows 1-301 (301 observations) source=standard_robust_mad_multiplier=3.5;nominal_baseline:/home/pablo/code/nvidia/fab_agent/benchmarks/datasets/tep/processed/IDV6_nominal.csv",
+              "signal": "XMEAS(1)",
+              "unit": "kscmh",
+              "value": 208.11026852732323
+            },
+            {
+              "evidence_id": "EV_0F1732C2B80A9CD1",
+              "kind": "SENSOR_ANOMALY",
+              "provenance": "/home/pablo/code/nvidia/fab_agent/benchmarks/datasets/tep/processed/IDV6.csv rows 1-301 (301 observations) source=standard_robust_mad_multiplier=3.5;nominal_baseline:/home/pablo/code/nvidia/fab_agent/benchmarks/datasets/tep/processed/IDV6_nominal.csv",
+              "signal": "XMV(3)",
+              "unit": "%",
+              "value": 58.59034310520867
+            },
+            {
+              "evidence_id": "EV_EEEE563381CE3A52",
+              "kind": "SENSOR_ANOMALY",
+              "provenance": "/home/pablo/code/nvidia/fab_agent/benchmarks/datasets/tep/processed/IDV6.csv rows 1-301 (301 observations) source=standard_robust_mad_multiplier=3.5;nominal_baseline:/home/pablo/code/nvidia/fab_agent/benchmarks/datasets/tep/processed/IDV6_nominal.csv",
+              "signal": "XMEAS(7)",
+              "unit": "kPa",
+              "value": 152.87226980044431
+            }
+          ],
+          "passed": true,
+          "predicates": {
+            "has_correlated_actuator_response": false,
+            "has_cross_tool_temporal_precedence": false,
+            "has_expected_spatial_signature": false,
+            "has_instrumentation_contradiction": false,
+            "has_manual_or_prior_case_support": false,
+            "has_missing_required_evidence": false,
+            "has_primary_signal_anomaly": true
+          },
+          "suggested_next_action": "ESCALATE_TO_ENGINEER",
+          "verdict": "SUPPORTED"
+        },
+        {
+          "candidate": {
+            "cited_evidence": [
+              "EV_B3964942D6D5F72E",
+              "EV_356443925540FF99",
+              "EV_1927A1B36B06C079"
+            ],
+            "claim": "A feed disturbance",
+            "hypothesis_class": "feed_disturbance"
+          },
+          "case_id": "IDV4",
+          "constraints": {
+            "forbidden": [],
+            "satisfied": [],
+            "unmet": [
+              "has_primary_signal_anomaly"
+            ],
+            "vetoed": []
+          },
+          "evidence": [
+            {
+              "evidence_id": "EV_B3964942D6D5F72E",
+              "kind": "SENSOR_NOMINAL",
+              "provenance": "/home/pablo/code/nvidia/fab_agent/benchmarks/datasets/tep/processed/IDV4.csv rows 1-301 (301 observations) source=standard_robust_mad_multiplier=3.5;nominal_baseline:/home/pablo/code/nvidia/fab_agent/benchmarks/datasets/tep/processed/IDV4_nominal.csv",
+              "signal": "XMEAS(1)",
+              "unit": "kscmh",
+              "value": 2.8071445660149723
+            },
+            {
+              "evidence_id": "EV_356443925540FF99",
+              "kind": "SENSOR_NOMINAL",
+              "provenance": "/home/pablo/code/nvidia/fab_agent/benchmarks/datasets/tep/processed/IDV4.csv rows 1-301 (301 observations) source=standard_robust_mad_multiplier=3.5;nominal_baseline:/home/pablo/code/nvidia/fab_agent/benchmarks/datasets/tep/processed/IDV4_nominal.csv",
+              "signal": "XMV(3)",
+              "unit": "%",
+              "value": 2.8589078900844354
+            },
+            {
+              "evidence_id": "EV_1927A1B36B06C079",
+              "kind": "SENSOR_ANOMALY",
+              "provenance": "/home/pablo/code/nvidia/fab_agent/benchmarks/datasets/tep/processed/IDV4.csv rows 1-301 (301 observations) source=standard_robust_mad_multiplier=3.5;nominal_baseline:/home/pablo/code/nvidia/fab_agent/benchmarks/datasets/tep/processed/IDV4_nominal.csv",
+              "signal": "XMEAS(7)",
+              "unit": "kPa",
+              "value": 4.6087874364685835
+            }
+          ],
+          "passed": true,
+          "predicates": {
+            "has_correlated_actuator_response": false,
+            "has_cross_tool_temporal_precedence": false,
+            "has_expected_spatial_signature": false,
+            "has_instrumentation_contradiction": false,
+            "has_manual_or_prior_case_support": false,
+            "has_missing_required_evidence": false,
+            "has_primary_signal_anomaly": false
+          },
+          "suggested_next_action": "ESCALATE_TO_ENGINEER",
+          "verdict": "INSUFFICIENT"
+        },
+        {
+          "candidate": {
+            "cited_evidence": [
+              "EV_B38F96E7A418F7D8",
+              "EV_DAFFCD4A00E2532D",
+              "EV_1393E1D1EC069345"
+            ],
+            "claim": "A feed disturbance",
+            "hypothesis_class": "feed_disturbance"
+          },
+          "case_id": "IDV5",
+          "constraints": {
+            "forbidden": [],
+            "satisfied": [],
+            "unmet": [
+              "has_primary_signal_anomaly"
+            ],
+            "vetoed": []
+          },
+          "evidence": [
+            {
+              "evidence_id": "EV_B38F96E7A418F7D8",
+              "kind": "SENSOR_NOMINAL",
+              "provenance": "/home/pablo/code/nvidia/fab_agent/benchmarks/datasets/tep/processed/IDV5.csv rows 1-301 (301 observations) source=standard_robust_mad_multiplier=3.5;nominal_baseline:/home/pablo/code/nvidia/fab_agent/benchmarks/datasets/tep/processed/IDV5_nominal.csv",
+              "signal": "XMEAS(1)",
+              "unit": "kscmh",
+              "value": 2.8033357503028986
+            },
+            {
+              "evidence_id": "EV_DAFFCD4A00E2532D",
+              "kind": "SENSOR_NOMINAL",
+              "provenance": "/home/pablo/code/nvidia/fab_agent/benchmarks/datasets/tep/processed/IDV5.csv rows 1-301 (301 observations) source=standard_robust_mad_multiplier=3.5;nominal_baseline:/home/pablo/code/nvidia/fab_agent/benchmarks/datasets/tep/processed/IDV5_nominal.csv",
+              "signal": "XMV(3)",
+              "unit": "%",
+              "value": 2.8202031902930784
+            },
+            {
+              "evidence_id": "EV_1393E1D1EC069345",
+              "kind": "SENSOR_NOMINAL",
+              "provenance": "/home/pablo/code/nvidia/fab_agent/benchmarks/datasets/tep/processed/IDV5.csv rows 1-301 (301 observations) source=standard_robust_mad_multiplier=3.5;nominal_baseline:/home/pablo/code/nvidia/fab_agent/benchmarks/datasets/tep/processed/IDV5_nominal.csv",
+              "signal": "XMEAS(7)",
+              "unit": "kPa",
+              "value": 3.005761862976697
+            }
+          ],
+          "passed": true,
+          "predicates": {
+            "has_correlated_actuator_response": false,
+            "has_cross_tool_temporal_precedence": false,
+            "has_expected_spatial_signature": false,
+            "has_instrumentation_contradiction": false,
+            "has_manual_or_prior_case_support": false,
+            "has_missing_required_evidence": false,
+            "has_primary_signal_anomaly": false
+          },
+          "suggested_next_action": "ESCALATE_TO_ENGINEER",
+          "verdict": "INSUFFICIENT"
+        },
+        {
+          "candidate": {
+            "cited_evidence": [
+              "EV_B7B671159D78DCBF",
+              "EV_CB41C5B017BD3936",
+              "EV_053CA400839B620F"
+            ],
+            "claim": "A feed disturbance",
+            "hypothesis_class": "feed_disturbance"
+          },
+          "case_id": "IDV7",
+          "constraints": {
+            "forbidden": [],
+            "satisfied": [],
+            "unmet": [
+              "has_primary_signal_anomaly"
+            ],
+            "vetoed": []
+          },
+          "evidence": [
+            {
+              "evidence_id": "EV_B7B671159D78DCBF",
+              "kind": "SENSOR_NOMINAL",
+              "provenance": "/home/pablo/code/nvidia/fab_agent/benchmarks/datasets/tep/processed/IDV7.csv rows 1-301 (301 observations) source=standard_robust_mad_multiplier=3.5;nominal_baseline:/home/pablo/code/nvidia/fab_agent/benchmarks/datasets/tep/processed/IDV7_nominal.csv",
+              "signal": "XMEAS(1)",
+              "unit": "kscmh",
+              "value": 2.929962786616098
+            },
+            {
+              "evidence_id": "EV_CB41C5B017BD3936",
+              "kind": "SENSOR_NOMINAL",
+              "provenance": "/home/pablo/code/nvidia/fab_agent/benchmarks/datasets/tep/processed/IDV7.csv rows 1-301 (301 observations) source=standard_robust_mad_multiplier=3.5;nominal_baseline:/home/pablo/code/nvidia/fab_agent/benchmarks/datasets/tep/processed/IDV7_nominal.csv",
+              "signal": "XMV(3)",
+              "unit": "%",
+              "value": 2.7707691732287736
+            },
+            {
+              "evidence_id": "EV_053CA400839B620F",
+              "kind": "SENSOR_ANOMALY",
+              "provenance": "/home/pablo/code/nvidia/fab_agent/benchmarks/datasets/tep/processed/IDV7.csv rows 1-301 (301 observations) source=standard_robust_mad_multiplier=3.5;nominal_baseline:/home/pablo/code/nvidia/fab_agent/benchmarks/datasets/tep/processed/IDV7_nominal.csv",
+              "signal": "XMEAS(7)",
+              "unit": "kPa",
+              "value": 20.333022121689357
+            }
+          ],
+          "passed": true,
+          "predicates": {
+            "has_correlated_actuator_response": false,
+            "has_cross_tool_temporal_precedence": false,
+            "has_expected_spatial_signature": false,
+            "has_instrumentation_contradiction": false,
+            "has_manual_or_prior_case_support": false,
+            "has_missing_required_evidence": false,
+            "has_primary_signal_anomaly": false
+          },
+          "suggested_next_action": "ESCALATE_TO_ENGINEER",
+          "verdict": "INSUFFICIENT"
+        },
+        {
+          "candidate": {
+            "cited_evidence": [
+              "EV_C3FF0FF2A4DE333F",
+              "EV_8DE2BCF32F6D2EC3",
+              "EV_8ABF9023899E5E28"
+            ],
+            "claim": "A feed disturbance",
+            "hypothesis_class": "feed_disturbance"
+          },
+          "case_id": "IDV14",
+          "constraints": {
+            "forbidden": [],
+            "satisfied": [],
+            "unmet": [
+              "has_primary_signal_anomaly"
+            ],
+            "vetoed": []
+          },
+          "evidence": [
+            {
+              "evidence_id": "EV_C3FF0FF2A4DE333F",
+              "kind": "SENSOR_NOMINAL",
+              "provenance": "/home/pablo/code/nvidia/fab_agent/benchmarks/datasets/tep/processed/IDV14.csv rows 1-301 (301 observations) source=standard_robust_mad_multiplier=3.5;nominal_baseline:/home/pablo/code/nvidia/fab_agent/benchmarks/datasets/tep/processed/IDV14_nominal.csv",
+              "signal": "XMEAS(1)",
+              "unit": "kscmh",
+              "value": 2.7910291323338345
+            },
+            {
+              "evidence_id": "EV_8DE2BCF32F6D2EC3",
+              "kind": "SENSOR_NOMINAL",
+              "provenance": "/home/pablo/code/nvidia/fab_agent/benchmarks/datasets/tep/processed/IDV14.csv rows 1-301 (301 observations) source=standard_robust_mad_multiplier=3.5;nominal_baseline:/home/pablo/code/nvidia/fab_agent/benchmarks/datasets/tep/processed/IDV14_nominal.csv",
+              "signal": "XMV(3)",
+              "unit": "%",
+              "value": 2.8128489459441997
+            },
+            {
+              "evidence_id": "EV_8ABF9023899E5E28",
+              "kind": "SENSOR_NOMINAL",
+              "provenance": "/home/pablo/code/nvidia/fab_agent/benchmarks/datasets/tep/processed/IDV14.csv rows 1-301 (301 observations) source=standard_robust_mad_multiplier=3.5;nominal_baseline:/home/pablo/code/nvidia/fab_agent/benchmarks/datasets/tep/processed/IDV14_nominal.csv",
+              "signal": "XMEAS(7)",
+              "unit": "kPa",
+              "value": 3.2332926309601047
+            }
+          ],
+          "passed": true,
+          "predicates": {
+            "has_correlated_actuator_response": false,
+            "has_cross_tool_temporal_precedence": false,
+            "has_expected_spatial_signature": false,
+            "has_instrumentation_contradiction": false,
+            "has_manual_or_prior_case_support": false,
+            "has_missing_required_evidence": false,
+            "has_primary_signal_anomaly": false
+          },
+          "suggested_next_action": "ESCALATE_TO_ENGINEER",
+          "verdict": "INSUFFICIENT"
+        },
+        {
+          "candidate": {
+            "cited_evidence": [
+              "EV_B8511579C2C4B62D",
+              "EV_BDA95BD95BB26ACC",
+              "EV_AC46B4F1F3B7216F"
+            ],
+            "claim": "A feed disturbance",
+            "hypothesis_class": "feed_disturbance"
+          },
+          "case_id": "IDV15",
+          "constraints": {
+            "forbidden": [],
+            "satisfied": [],
+            "unmet": [
+              "has_primary_signal_anomaly"
+            ],
+            "vetoed": []
+          },
+          "evidence": [
+            {
+              "evidence_id": "EV_B8511579C2C4B62D",
+              "kind": "SENSOR_NOMINAL",
+              "provenance": "/home/pablo/code/nvidia/fab_agent/benchmarks/datasets/tep/processed/IDV15.csv rows 1-301 (301 observations) source=standard_robust_mad_multiplier=3.5;nominal_baseline:/home/pablo/code/nvidia/fab_agent/benchmarks/datasets/tep/processed/IDV15_nominal.csv",
+              "signal": "XMEAS(1)",
+              "unit": "kscmh",
+              "value": 2.7928896771252463
+            },
+            {
+              "evidence_id": "EV_BDA95BD95BB26ACC",
+              "kind": "SENSOR_NOMINAL",
+              "provenance": "/home/pablo/code/nvidia/fab_agent/benchmarks/datasets/tep/processed/IDV15.csv rows 1-301 (301 observations) source=standard_robust_mad_multiplier=3.5;nominal_baseline:/home/pablo/code/nvidia/fab_agent/benchmarks/datasets/tep/processed/IDV15_nominal.csv",
+              "signal": "XMV(3)",
+              "unit": "%",
+              "value": 2.8247603710441997
+            },
+            {
+              "evidence_id": "EV_AC46B4F1F3B7216F",
+              "kind": "SENSOR_NOMINAL",
+              "provenance": "/home/pablo/code/nvidia/fab_agent/benchmarks/datasets/tep/processed/IDV15.csv rows 1-301 (301 observations) source=standard_robust_mad_multiplier=3.5;nominal_baseline:/home/pablo/code/nvidia/fab_agent/benchmarks/datasets/tep/processed/IDV15_nominal.csv",
+              "signal": "XMEAS(7)",
+              "unit": "kPa",
+              "value": 2.8175620409849835
+            }
+          ],
+          "passed": true,
+          "predicates": {
+            "has_correlated_actuator_response": false,
+            "has_cross_tool_temporal_precedence": false,
+            "has_expected_spatial_signature": false,
+            "has_instrumentation_contradiction": false,
+            "has_manual_or_prior_case_support": false,
+            "has_missing_required_evidence": false,
+            "has_primary_signal_anomaly": false
+          },
+          "suggested_next_action": "ESCALATE_TO_ENGINEER",
+          "verdict": "INSUFFICIENT"
+        },
+        {
+          "candidate": {
+            "cited_evidence": [
+              "EV_D0D6FFD9BB9A6C05",
+              "EV_78BB8BB604DACCC0",
+              "EV_236A58F2EEC1E43A"
+            ],
+            "claim": "A feed disturbance",
+            "hypothesis_class": "feed_disturbance"
+          },
+          "case_id": "IDV3",
+          "constraints": {
+            "forbidden": [],
+            "satisfied": [],
+            "unmet": [
+              "has_primary_signal_anomaly"
+            ],
+            "vetoed": []
+          },
+          "evidence": [
+            {
+              "evidence_id": "EV_D0D6FFD9BB9A6C05",
+              "kind": "SENSOR_NOMINAL",
+              "provenance": "/home/pablo/code/nvidia/fab_agent/benchmarks/datasets/tep/processed/IDV3.csv rows 1-301 (301 observations) source=standard_robust_mad_multiplier=3.5;nominal_baseline:/home/pablo/code/nvidia/fab_agent/benchmarks/datasets/tep/processed/IDV3_nominal.csv",
+              "signal": "XMEAS(1)",
+              "unit": "kscmh",
+              "value": 2.8014431111181652
+            },
+            {
+              "evidence_id": "EV_78BB8BB604DACCC0",
+              "kind": "SENSOR_NOMINAL",
+              "provenance": "/home/pablo/code/nvidia/fab_agent/benchmarks/datasets/tep/processed/IDV3.csv rows 1-301 (301 observations) source=standard_robust_mad_multiplier=3.5;nominal_baseline:/home/pablo/code/nvidia/fab_agent/benchmarks/datasets/tep/processed/IDV3_nominal.csv",
+              "signal": "XMV(3)",
+              "unit": "%",
+              "value": 2.8336887859833166
+            },
+            {
+              "evidence_id": "EV_236A58F2EEC1E43A",
+              "kind": "SENSOR_NOMINAL",
+              "provenance": "/home/pablo/code/nvidia/fab_agent/benchmarks/datasets/tep/processed/IDV3.csv rows 1-301 (301 observations) source=standard_robust_mad_multiplier=3.5;nominal_baseline:/home/pablo/code/nvidia/fab_agent/benchmarks/datasets/tep/processed/IDV3_nominal.csv",
+              "signal": "XMEAS(7)",
+              "unit": "kPa",
+              "value": 2.988917840490751
+            }
+          ],
+          "passed": true,
+          "predicates": {
+            "has_correlated_actuator_response": false,
+            "has_cross_tool_temporal_precedence": false,
+            "has_expected_spatial_signature": false,
+            "has_instrumentation_contradiction": false,
+            "has_manual_or_prior_case_support": false,
+            "has_missing_required_evidence": false,
+            "has_primary_signal_anomaly": false
+          },
+          "suggested_next_action": "ESCALATE_TO_ENGINEER",
+          "verdict": "INSUFFICIENT"
+        },
+        {
+          "candidate": {
+            "cited_evidence": [
+              "EV_9844E90E2EB801C3",
+              "EV_BF0C398329965A97",
+              "EV_9C32606371D80D44"
+            ],
+            "claim": "A feed disturbance",
+            "hypothesis_class": "feed_disturbance"
+          },
+          "case_id": "IDV9",
+          "constraints": {
+            "forbidden": [],
+            "satisfied": [],
+            "unmet": [
+              "has_primary_signal_anomaly"
+            ],
+            "vetoed": []
+          },
+          "evidence": [
+            {
+              "evidence_id": "EV_9844E90E2EB801C3",
+              "kind": "SENSOR_NOMINAL",
+              "provenance": "/home/pablo/code/nvidia/fab_agent/benchmarks/datasets/tep/processed/IDV9.csv rows 1-301 (301 observations) source=standard_robust_mad_multiplier=3.5;nominal_baseline:/home/pablo/code/nvidia/fab_agent/benchmarks/datasets/tep/processed/IDV9_nominal.csv",
+              "signal": "XMEAS(1)",
+              "unit": "kscmh",
+              "value": 2.7978503191898354
+            },
+            {
+              "evidence_id": "EV_BF0C398329965A97",
+              "kind": "SENSOR_NOMINAL",
+              "provenance": "/home/pablo/code/nvidia/fab_agent/benchmarks/datasets/tep/processed/IDV9.csv rows 1-301 (301 observations) source=standard_robust_mad_multiplier=3.5;nominal_baseline:/home/pablo/code/nvidia/fab_agent/benchmarks/datasets/tep/processed/IDV9_nominal.csv",
+              "signal": "XMV(3)",
+              "unit": "%",
+              "value": 2.8344461892507082
+            },
+            {
+              "evidence_id": "EV_9C32606371D80D44",
+              "kind": "SENSOR_NOMINAL",
+              "provenance": "/home/pablo/code/nvidia/fab_agent/benchmarks/datasets/tep/processed/IDV9.csv rows 1-301 (301 observations) source=standard_robust_mad_multiplier=3.5;nominal_baseline:/home/pablo/code/nvidia/fab_agent/benchmarks/datasets/tep/processed/IDV9_nominal.csv",
+              "signal": "XMEAS(7)",
+              "unit": "kPa",
+              "value": 2.9584966922752254
+            }
+          ],
+          "passed": true,
+          "predicates": {
+            "has_correlated_actuator_response": false,
+            "has_cross_tool_temporal_precedence": false,
+            "has_expected_spatial_signature": false,
+            "has_instrumentation_contradiction": false,
+            "has_manual_or_prior_case_support": false,
+            "has_missing_required_evidence": false,
+            "has_primary_signal_anomaly": false
+          },
+          "suggested_next_action": "ESCALATE_TO_ENGINEER",
+          "verdict": "INSUFFICIENT"
+        }
+      ],
+      "configuration": "/home/pablo/code/nvidia/fab_agent/config/sensor_relations/tep_reactor.yaml",
+      "passed": true,
+      "suite": "TEP Reactor"
+    }
+  ],
+  "timestamp": "2026-10-03"
+}

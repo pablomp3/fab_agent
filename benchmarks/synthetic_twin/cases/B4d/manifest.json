@@ -1,0 +1,34 @@
+{
+  "baseline": {
+    "distribution": "Gaussian",
+    "drift_increment_sd": 0.05,
+    "mean": 10.0,
+    "noise_sd": 1.0
+  },
+  "case_id": "B4d",
+  "configuration_revision": "sha256:890a0eca52708b01de01da4da6288e5451a6edc3ea644fd5aae3c8a5cc78f475",
+  "generator_revision": "sha256:2d87d720d15d52120c799d47504756b7648d7fceb0b351c80e483a3022d9a261",
+  "mutations": {
+    "chamber_pressure": {
+      "indices_1_based": [
+        40,
+        60
+      ],
+      "offset_sigma": 8.0
+    },
+    "roughing_line_pressure": {
+      "omitted_channel": true
+    }
+  },
+  "observations": 120,
+  "outputs": {
+    "telemetry.csv": "sha256:4bbce57ebe3974790d811aa126076d0e93f27d93b7c74119a88ace14c9c040f1"
+  },
+  "robust_z_threshold": 3.5,
+  "sampling_hz": 1,
+  "seed": 45,
+  "simulation_unit_alternative": "dimensionless_simulation_unit",
+  "source": "simulation_parameter:synthetic_twin_v1",
+  "threshold_source": "simulation_parameter:synthetic_twin_v1",
+  "unit": null
+}

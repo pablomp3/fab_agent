@@ -1,0 +1,13 @@
+version: 1
+name: tep_reactor
+provenance: "TEP documented cause and symptom variables"
+signals:
+  - {name: "XMEAS(1)", unit: "kscmh", robust_z_threshold: null, threshold_source: null}
+  - {name: "XMV(3)", unit: "%", robust_z_threshold: null, threshold_source: null}
+  - {name: "XMEAS(7)", unit: "kPa", robust_z_threshold: null, threshold_source: null}
+groups:
+  feed_system: ["XMEAS(1)", "XMV(3)"]
+  reactor_response: ["XMEAS(7)"]
+roles:
+  cause: ["XMEAS(1)", "XMV(3)"]
+  symptom: ["XMEAS(7)"]

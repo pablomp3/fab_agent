@@ -1,0 +1,59 @@
+{
+  "attempts": 5,
+  "case_id": "B4e",
+  "gate": "W4",
+  "mode": "live",
+  "model": "nvidia/Nemotron-3_5-Lightning",
+  "per_attempt": [
+    {
+      "any_supported": true,
+      "failure_category": null,
+      "finish_reason": null,
+      "statuses": [
+        "SUPPORTED",
+        "SUPPORTED",
+        "SUPPORTED"
+      ]
+    },
+    {
+      "any_supported": false,
+      "failure_category": null,
+      "finish_reason": null,
+      "statuses": [
+        "INSUFFICIENT",
+        "INSUFFICIENT",
+        "INSUFFICIENT",
+        "INSUFFICIENT"
+      ]
+    },
+    {
+      "any_supported": true,
+      "failure_category": null,
+      "finish_reason": null,
+      "statuses": [
+        "SUPPORTED",
+        "SUPPORTED"
+      ]
+    },
+    {
+      "any_supported": true,
+      "failure_category": null,
+      "finish_reason": null,
+      "statuses": [
+        "SUPPORTED"
+      ]
+    },
+    {
+      "any_supported": true,
+      "failure_category": null,
+      "finish_reason": null,
+      "statuses": [
+        "SUPPORTED",
+        "INSUFFICIENT",
+        "INSUFFICIENT"
+      ]
+    }
+  ],
+  "supported_count": 4,
+  "supported_rate": 0.8
+}

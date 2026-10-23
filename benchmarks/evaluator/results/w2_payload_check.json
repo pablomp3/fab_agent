@@ -1,0 +1,18 @@
+{
+  "gate": "W2",
+  "status": "PASS",
+  "run_at_utc": "2026-10-04T13:34:37.413085+00:00",
+  "uncompressed_csv_bytes": 30000000008,
+  "compressed_input_bytes": 137937014,
+  "payload_bytes": 370,
+  "payload_limit_bytes": 2048,
+  "llm_evidence_bytes": 173,
+  "llm_evidence_limit_bytes": 2048,
+  "llm_request_bytes": 1441,
+  "llm_request_limit_bytes": 8192,
+  "rows": 3000000,
+  "channels": 1,
+  "python_version": "3.12.3",
+  "duckdb_version": "1.5.6",
+  "fixture": "synthetic constant-channel stress stream; unit unknown"
+}

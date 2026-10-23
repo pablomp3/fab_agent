@@ -1,0 +1,43 @@
+{
+  "baseline": {
+    "distribution": "Gaussian",
+    "drift_increment_sd": 0.05,
+    "mean": 10.0,
+    "noise_sd": 1.0
+  },
+  "case_id": "B4a",
+  "configuration_revision": "sha256:890a0eca52708b01de01da4da6288e5451a6edc3ea644fd5aae3c8a5cc78f475",
+  "generator_revision": "sha256:2d87d720d15d52120c799d47504756b7648d7fceb0b351c80e483a3022d9a261",
+  "mutations": {
+    "impedance": {
+      "clamped_max_robust_z": 0.999,
+      "clipped_values": 46
+    },
+    "pressure": {
+      "clamped_max_robust_z": 0.999,
+      "clipped_values": 40
+    },
+    "sensor_17": {
+      "indices_1_based": [
+        50,
+        70
+      ],
+      "offset_sigma": 15.0
+    },
+    "thermal": {
+      "clamped_max_robust_z": 0.999,
+      "clipped_values": 41
+    }
+  },
+  "observations": 120,
+  "outputs": {
+    "telemetry.csv": "sha256:2942f5e45fcbff4bd33df51387846f124319ea083ad0ca9e873d1b3bee3192df"
+  },
+  "robust_z_threshold": 3.5,
+  "sampling_hz": 1,
+  "seed": 42,
+  "simulation_unit_alternative": "dimensionless_simulation_unit",
+  "source": "simulation_parameter:synthetic_twin_v1",
+  "threshold_source": "simulation_parameter:synthetic_twin_v1",
+  "unit": null
+}

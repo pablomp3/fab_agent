@@ -6,4 +6,18 @@ __pycache__/
 .pytest_cache/
 .ruff_cache/
 .basedpyright/
+
+# Secrets and local-only working files
+.env
+.env.*
+!.env.example
+last_response_from_llm.md
+HOW_IT_WORKS.original.md
+status_readme_gemini_*.md
+
+# Private evaluation answers and large raw datasets
 benchmarks/evaluator/ground_truths/
+benchmarks/datasets/phm2018/raw/
+benchmarks/datasets/phm2018/processed/
+benchmarks/datasets/tep/raw/
+benchmarks/datasets/tep/processed/

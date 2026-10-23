@@ -1,0 +1,38 @@
+{
+  "anomaly_count": 2,
+  "any_supported": false,
+  "case_id": "phm2018_flowcool",
+  "confidence": "INSUFFICIENT",
+  "disposition": "ESCALATE",
+  "engineer_note_chars": 153,
+  "evidence_bytes": 380,
+  "evidence_count": 2,
+  "evidence_limit_bytes": 2048,
+  "gate": "W5.5",
+  "hypotheses": [
+    {
+      "hypothesis_class": "equipment_fault",
+      "root_cause": "process_drift",
+      "status": "INSUFFICIENT",
+      "veto_reason": null
+    },
+    {
+      "hypothesis_class": "equipment_fault",
+      "root_cause": "process_drift",
+      "status": "INSUFFICIENT",
+      "veto_reason": null
+    }
+  ],
+  "input": "benchmarks/datasets/phm2018/processed/01_M02_DC_score.csv",
+  "llm_calls": 1,
+  "mode": "live",
+  "model": "nvidia/Nemotron-3_5-Lightning",
+  "notice": null,
+  "payload_ok": true,
+  "request_bytes": 1845,
+  "request_limit_bytes": 8192,
+  "required_next_checks": [],
+  "selected_config": "ion_mill_phm18",
+  "selected_scenario": "flowcool",
+  "signal_coverage": 1.0
+}

@@ -1,0 +1,37 @@
+{
+  "analysis_performed": true,
+  "anomaly_count": 2,
+  "any_supported": true,
+  "case_id": "phm2018_flowcool",
+  "confidence": "LOW",
+  "detail": null,
+  "engineer_note_chars": 153,
+  "evidence_bytes": 379,
+  "evidence_count": 2,
+  "evidence_limit_bytes": 2048,
+  "gate": "W5.5",
+  "hypotheses": [
+    {
+      "hypothesis_class": "equipment_fault",
+      "root_cause": "equipment_fault",
+      "status": "SUPPORTED",
+      "veto_reason": null
+    }
+  ],
+  "input": "benchmarks/datasets/phm2018/processed/01_M02_DC_score.csv",
+  "llm_calls": 0,
+  "mode": "offline",
+  "model": "nvidia/Nemotron-3_5-Lightning",
+  "model_called": true,
+  "outcome": "ANALYSIS_SUPPORTED",
+  "payload_ok": true,
+  "request_bytes": 1839,
+  "request_limit_bytes": 8192,
+  "required_next_checks": [
+    "Have a human confirm the configured candidate: flowcool subsystem fault."
+  ],
+  "selected_config": "ion_mill_phm18",
+  "selected_scenario": "flowcool",
+  "signal_coverage": 1.0,
+  "suggested_next_action": "INSPECT_COMPONENT"
+}

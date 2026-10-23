@@ -1,0 +1,25 @@
+{
+  "any_supported": true,
+  "case_id": "B4e",
+  "confidence": "LOW",
+  "evidence_count": 4,
+  "failure_category": null,
+  "finish_reason": null,
+  "gate": "W4",
+  "hypotheses": [
+    {
+      "hypothesis_class": "equipment_fault",
+      "model_narrative_present": true,
+      "root_cause": "equipment_fault",
+      "status": "SUPPORTED",
+      "veto_reason": null
+    }
+  ],
+  "llm_calls": 0,
+  "max_tokens": 768,
+  "mode": "offline",
+  "model": "nvidia/Nemotron-3_5-Lightning",
+  "provider_base_url": "https://api.tokenfactory.nebius.com/v1",
+  "suggested_next_action": "INSPECT_COMPONENT",
+  "validation_details": null
+}

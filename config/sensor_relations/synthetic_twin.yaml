@@ -21,6 +21,10 @@ scenarios:
       hypothesis_class: equipment_fault
       # Resolved to the content-addressed evidence ID for EV_sensor_17_anomaly.
       cited_signals: [sensor_17]
+      root_cause: equipment_fault
+      failure_mode: Simulated RF generator arc.
+      mechanism: Synthetic adversarial case; the arc signature is injected by the twin generator.
+    supported_action: INSPECT_COMPONENT
   B4b:
     signals:
       - {name: thermal_sensor, unit: null, robust_z_threshold: 3.5, threshold_source: simulation_parameter:synthetic_twin_v1}
@@ -36,6 +40,10 @@ scenarios:
       hypothesis_class: equipment_fault
       # Resolves EV_thermal_anomaly to the actual unevaluated thermal evidence.
       cited_signals: [thermal_sensor]
+      root_cause: equipment_fault
+      failure_mode: Simulated heater jacket degradation.
+      mechanism: Synthetic adversarial case; the thermal signature is injected by the twin generator.
+    supported_action: INSPECT_COMPONENT
   B4c:
     signals:
       - {name: met_cd_bias, unit: null, robust_z_threshold: 3.5, threshold_source: simulation_parameter:synthetic_twin_v1}
@@ -53,6 +61,10 @@ scenarios:
       claim: Etch Chamber RF Drift caused CD Defect
       hypothesis_class: upstream_process
       cited_signals: [met_cd_bias, etch_rf_power, chamber_pressure]
+      root_cause: upstream_process
+      failure_mode: Simulated etch chamber RF drift.
+      mechanism: Synthetic adversarial case; upstream drift precedes the CD symptom in the twin timeline.
+    supported_action: ESCALATE_TO_ENGINEER
   B4d:
     signals:
       - {name: chamber_pressure, unit: null, robust_z_threshold: 3.5, threshold_source: simulation_parameter:synthetic_twin_v1}
@@ -68,3 +80,7 @@ scenarios:
       claim: Turbomolecular Pump Failure
       hypothesis_class: equipment_fault
       cited_signals: [chamber_pressure, roughing_line_pressure]
+      root_cause: equipment_fault
+      failure_mode: Simulated turbomolecular pump failure.
+      mechanism: Synthetic adversarial case; the pressure signature is injected by the twin generator.
+    supported_action: INSPECT_COMPONENT

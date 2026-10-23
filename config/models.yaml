@@ -1,0 +1,10 @@
+version: 1
+roles:
+  SYNTHESIS:
+    model: nvidia/Nemotron-3_5-Lightning
+    # To switch to the larger synthesis model later, replace the model above.
+    # model: nvidia/Nemotron-3-Ultra-550b-a55b
+    model_env: FABAGENT_SYNTHESIS_MODEL
+    api_key_env: NEBIUS_API_KEY
+    base_url: https://api.tokenfactory.nebius.com/v1
+    timeout_seconds: 30

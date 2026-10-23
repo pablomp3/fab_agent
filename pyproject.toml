@@ -10,6 +10,9 @@ dependencies = [
     "pandas>=2.2.0",
     "scipy>=1.13.0",
     "PyYAML>=6.0.0",
+    # W6 technician dashboard. Streamlit is the only UI dependency; it renders
+    # the glass-box result. No engine or core module imports it.
+    "streamlit>=1.40",
 ]
 
 [project.optional-dependencies]
