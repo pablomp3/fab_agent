@@ -151,13 +151,13 @@ The $\le 2\text{ KB}$ bound applies to the **evidence summary**, not to the fixe
                ▼ (Bounded Payload <= 2 KB)              │
 ┌───────────────────────────────────────┐               │
 │ PROBABILISTIC LLM (NVIDIA Nemotron)   │               │
-│ Candidate Hypotheses citing Evidence  │               │
+│ Narrative citing Evidence (not gated) │               │
 └──────────────┬────────────────────────┘               │
                │                                        │
                ▼                                        ▼
 ┌───────────────────────────────────────────────────────────────────────┐
 │              DETERMINISTIC SAFETY GATE (src/core/safety_gate.py)      │
-│  • Re-resolves cited Evidence IDs                                     │
+│  • Resolves the configured candidate's citations                      │
 │  • Enforces hard physical vetoes against contradictions               │
 │  • Enforces typed SuggestedAction enum (no autonomous action)          │
 └──────────────────────────────────┬────────────────────────────────────┘
