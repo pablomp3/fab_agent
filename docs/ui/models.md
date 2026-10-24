@@ -22,7 +22,8 @@ The model never receives the raw CSV, the full telemetry table, or an API key.
 Tavily is an **optional external reference lookup** for the engineer. It runs
 only when the result is inconclusive or experimental.
 
-- The query is built from anomalous signal names and the configured claim.
+- The query is built from anomalous signal names, falling back to the configured
+  claim when no anomaly is available.
 - It does **not** include raw values, the full engineer note, or telemetry.
 - Up to three public references are shown with their URLs and why they were
   consulted.
@@ -34,6 +35,6 @@ only when the result is inconclusive or experimental.
 | Service | Sent | Not sent |
 | --- | --- | --- |
 | Nemotron | Bounded evidence summary, short engineer note, configured candidate context | Raw CSV, full telemetry, API key |
-| Tavily | Anomalous signal names and the configured claim | Raw values, full engineer note, telemetry |
+| Tavily | Anomalous signal names, or the configured claim as a fallback | Raw values, full engineer note, telemetry |
 
 Provider keys stay in the server environment. The browser never receives them.
