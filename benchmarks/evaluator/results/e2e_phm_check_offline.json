@@ -6,7 +6,7 @@
   "confidence": "LOW",
   "detail": null,
   "engineer_note_chars": 153,
-  "evidence_bytes": 379,
+  "evidence_bytes": 380,
   "evidence_count": 2,
   "evidence_limit_bytes": 2048,
   "gate": "W5.5",
@@ -25,7 +25,7 @@
   "model_called": true,
   "outcome": "ANALYSIS_SUPPORTED",
   "payload_ok": true,
-  "request_bytes": 1839,
+  "request_bytes": 1840,
   "request_limit_bytes": 8192,
   "required_next_checks": [
     "Have a human confirm the configured candidate: flowcool subsystem fault."

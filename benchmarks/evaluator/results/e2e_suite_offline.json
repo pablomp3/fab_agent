@@ -58,7 +58,7 @@
     {
       "case_id": "tep_idv6_feed",
       "csv": "benchmarks/datasets/tep/sample/IDV6_sample.csv",
-      "expectation_note": "no runnable TEP scenario; experimental maps anyway",
+      "expectation_note": "feed-system cause channels move; safe path supports",
       "experimental_path": {
         "analysis_performed": true,
         "anomaly_count": 2,
@@ -85,19 +85,26 @@
         "unverified_tagged": true
       },
       "safe_path": {
-        "analysis_performed": false,
-        "any_supported": false,
+        "analysis_performed": true,
+        "any_supported": true,
         "any_vetoed": false,
-        "detail": "No configured tool profile matches the uploaded columns; review the export schema.",
-        "evidence_count": 0,
-        "expected_outcome": "NO_MATCHING_TOOL_SCHEMA",
-        "hypotheses": [],
+        "detail": null,
+        "evidence_count": 3,
+        "expected_outcome": "ANALYSIS_SUPPORTED",
+        "hypotheses": [
+          {
+            "hypothesis_class": "feed_disturbance",
+            "root_cause": "upstream_process",
+            "status": "SUPPORTED",
+            "veto_reason": null
+          }
+        ],
         "matched_expectation": true,
-        "model_called": false,
-        "outcome": "NO_MATCHING_TOOL_SCHEMA",
-        "selected_config": null,
-        "selected_scenario": null,
-        "suggested_next_action": "AUTHOR_TOOL_CONFIG"
+        "model_called": true,
+        "outcome": "ANALYSIS_SUPPORTED",
+        "selected_config": "tep_reactor",
+        "selected_scenario": "feed_loss",
+        "suggested_next_action": "ESCALATE_TO_ENGINEER"
       },
       "source": "real_public_benchmark"
     },
@@ -131,19 +138,26 @@
         "unverified_tagged": true
       },
       "safe_path": {
-        "analysis_performed": false,
+        "analysis_performed": true,
         "any_supported": false,
         "any_vetoed": false,
-        "detail": "No configured tool profile matches the uploaded columns; review the export schema.",
-        "evidence_count": 0,
-        "expected_outcome": "NO_MATCHING_TOOL_SCHEMA",
-        "hypotheses": [],
+        "detail": null,
+        "evidence_count": 3,
+        "expected_outcome": "ANALYSIS_INCONCLUSIVE",
+        "hypotheses": [
+          {
+            "hypothesis_class": "feed_disturbance",
+            "root_cause": "upstream_process",
+            "status": "INSUFFICIENT",
+            "veto_reason": null
+          }
+        ],
         "matched_expectation": true,
-        "model_called": false,
-        "outcome": "NO_MATCHING_TOOL_SCHEMA",
-        "selected_config": null,
-        "selected_scenario": null,
-        "suggested_next_action": "AUTHOR_TOOL_CONFIG"
+        "model_called": true,
+        "outcome": "ANALYSIS_INCONCLUSIVE",
+        "selected_config": "tep_reactor",
+        "selected_scenario": "feed_loss",
+        "suggested_next_action": "COLLECT_MORE_DATA"
       },
       "source": "real_public_benchmark"
     },

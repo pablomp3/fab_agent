@@ -59,8 +59,25 @@ class TriageTests(unittest.TestCase):
             select_profile(("alpha", "beta", "gamma"), "unknown tool")
 
     def test_scenario_less_config_is_not_runnable(self) -> None:
-        with self.assertRaises(NoMatchingProfile):
-            select_profile(TEP_HEADERS, "feed disturbance")
+        with TemporaryDirectory() as temp_dir:
+            config_path = Path(temp_dir) / "no_scenarios.yaml"
+            config_path.write_text(
+                "version: 1\n"
+                "name: no_scenarios\n"
+                "provenance: triage test\n"
+                "signals:\n"
+                "  - {name: \"XMEAS(1)\", unit: null, "
+                "robust_z_threshold: null, threshold_source: null}\n"
+                "  - {name: \"XMV(3)\", unit: null, "
+                "robust_z_threshold: null, threshold_source: null}\n"
+                "  - {name: \"XMEAS(7)\", unit: null, "
+                "robust_z_threshold: null, threshold_source: null}\n",
+                encoding="utf-8",
+            )
+            with self.assertRaises(NoMatchingProfile):
+                select_profile(
+                    TEP_HEADERS, "feed disturbance", search_dir=temp_dir
+                )
 
 
 if __name__ == "__main__":

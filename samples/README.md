@@ -1,8 +1,10 @@
 # Demo samples
 
+The dashboard also ships prepared public-dataset slices in
+`benchmarks/datasets/phm2018/sample/` and `benchmarks/datasets/tep/sample/`.
 These four small CSVs are **synthetic demo inputs**, not field telemetry. They
-exercise the product paths without a provider key when the dashboard's demo
-mode is enabled.
+exercise the product paths without a provider key when the dashboard's offline
+transport is selected.
 
 | File | What it demonstrates |
 |---|---|
@@ -15,8 +17,12 @@ The safe-path samples use the headers of the public PHM 2018 / synthetic-twin
 configurations so the deterministic triage can select a scenario. The values
 are hand-written; they are not copied from a fab or from a public dataset.
 
-Run the dashboard in demo mode (no `NEBIUS_API_KEY` needed) or run the same
-files through the product entry point with an offline transport:
+The dashboard can also generate a fresh seeded export from the same
+baseline-plus-drift idea. The generator writes a nominal lead-in and an optional
+drift, but it never writes a ground-truth label; the Python gate still decides.
+
+Run the dashboard in offline mode or run the same files through the product
+entry point with an offline transport:
 
 ```sh
 PYTHONPATH=. .venv/bin/python - <<'PY'

@@ -11,6 +11,7 @@ __pycache__/
 .env
 .env.*
 !.env.example
+.streamlit/secrets.toml
 last_response_from_llm.md
 HOW_IT_WORKS.original.md
 status_readme_gemini_*.md

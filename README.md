@@ -22,35 +22,48 @@ CSV ──> DuckDB triage ──> scoped evidence ──> configured candidate
                          Python predicates + vetoes + typed action
 ```
 
-## Try it in 30 seconds (no API key)
+## Try it in 30 seconds
 
 ```sh
 uv sync
 PYTHONPATH=. .venv/bin/streamlit run src/ui/app.py
 ```
 
-Open the app, keep **Demo mode** on, and run one of the four synthetic samples:
+The dashboard is a guided five-step workflow. Its sidebar pages explain what
+FabAgent is, how Nemotron and Tavily are used, and how the gate compares with a
+naive LLM. The run page previews the first rows, describes the important
+columns and YAML signals, and shows a live checklist of each stage. It ships
+with prepared datasets across public and synthetic data:
 
-| Sample | What it shows |
+| Dataset | What it shows |
 |---|---|
-| `flowcool_supported.csv` | Safe path, `SUPPORTED`, action `INSPECT_COMPONENT` |
-| `flowcool_inconclusive.csv` | Safe path, `INSUFFICIENT`, action `COLLECT_MORE_DATA` |
-| `rf_contradiction.csv` | Corroborating channels are nominal, so the contradiction veto wins over the model's arc story |
-| `unknown_tool.csv` | No schema matches; experimental mapping, unverified evidence, reviewable draft config |
+| PHM 2018 coolant loop | Public fault window → `SUPPORTED`, action `INSPECT_COMPONENT` |
+| PHM 2018 nominal | Public nominal window → `INSUFFICIENT`, action `COLLECT_MORE_DATA` |
+| TEP IDV 6 feed | Public feed disturbance → `SUPPORTED`, action `ESCALATE_TO_ENGINEER` |
+| TEP IDV 3 | Public unmodeled disturbance → `INSUFFICIENT`, action `COLLECT_MORE_DATA` |
+| Synthetic coolant loop | Both configured channels move → `SUPPORTED` |
+| Synthetic coolant loop nominal | Configured channels are quiet → `INSUFFICIENT` |
+| Synthetic sensor contradiction | Corroborating channels are nominal, so the Python veto wins over the model's arc story |
+| Unknown tool dataset | No schema matches → experimental mapping, unverified evidence, reviewable draft config |
 
-Demo mode uses a deterministic local transport that goes through the same
-engine, citation resolver, predicates, and gate as a live call. It is a demo
-transport, not a substitute for the live model. The samples are synthetic and
-are not field validation.
+You can also upload your own CSV or generate a seeded synthetic export. The
+generator writes a nominal lead-in plus an optional drift; it never writes a
+ground-truth label. Every run still goes through the real triage, DuckDB scan,
+model boundary, citation resolver, predicates, and Python gate.
 
-For live mode, set `NEBIUS_API_KEY` in the environment and turn demo mode off:
+When the server has `NEBIUS_API_KEY`, the dashboard defaults to live Nemotron.
+When it does not, the deterministic offline transport exercises the same gate.
+The browser never receives either key. Optional Tavily references appear for
+inconclusive or experimental runs when the server has `TAVILY_API_KEY`; they
+never change the verdict.
 
 ```sh
-export NEBIUS_API_KEY          # set it in your shell or secret manager
+export NEBIUS_API_KEY          # server environment or secret manager
+export TAVILY_API_KEY          # optional; enables external references
 PYTHONPATH=. .venv/bin/streamlit run src/ui/app.py
 ```
 
-The app never displays, logs, or stores the key.
+The app never displays, logs, or stores the keys.
 
 ## The core contract
 
@@ -113,7 +126,8 @@ PYTHONPATH=. .venv/bin/python benchmarks/evaluator/user_story_runner.py --live
    `veto_if_any` rule, and chooses the typed action.
 4. **Present.** The Streamlit dashboard shows the five stages explicitly:
    triage, scope, model call, Python verdict, and next step. The model narrative
-   is a separate expander.
+   is a separate expander. For inconclusive or experimental runs, optional
+   Tavily references are shown separately and never enter the gate.
 
 If no schema matches, `analyze_csv` automatically falls back to the
 experimental mapping (`src/experimental.py`): it profiles columns, asks the
@@ -192,9 +206,12 @@ Measured highlights:
 
 The single naive-LLM baseline harness is
 [`benchmarks/evaluator/naive_llm_baseline.py`](benchmarks/evaluator/naive_llm_baseline.py).
-Its offline mode is a harness check with an over-claiming fixture
-(`results/naive_llm_baseline_offline.json`), **not** a measured LLM baseline.
-Run it with `--live` to record `results/naive_llm_baseline.json`.
+It was run live on 2026-10-24: **2/5 safe decisions**. The unconstrained model
+recommended immediate action on B4b, B4c, and B4d, where the deterministic gate
+abstains. The artifact is `results/naive_llm_baseline.json`; raw model text is
+not stored. Its offline mode is only a harness check with an over-claiming
+fixture (`results/naive_llm_baseline_offline.json`), **not** a measured LLM
+result. This is one baseline, not an ablation study.
 
 The full dataset defense for judges is in
 [`dataset_validation_defense.md`](dataset_validation_defense.md). The open
@@ -214,19 +231,22 @@ fab_agent/
 │   │   └── pipeline.py       # assess one candidate
 │   ├── agents/               # the model boundary: proposes narrative only
 │   ├── ui/                   # Streamlit dashboard and pure view helpers
+│   ├── tools/                # optional bounded Tavily search
 │   ├── config_loader.py      # strict YAML -> immutable config objects
 │   ├── config_types.py       # CandidateConfig / ScenarioConfig
 │   ├── triage.py             # CSV headers + note -> scenario
 │   ├── dossier.py            # safe path
 │   ├── experimental.py       # unverified mapping fallback
 │   ├── analyze.py            # product entry point
-│   └── demo.py               # key-free deterministic demo transport
+│   ├── demo.py               # key-free deterministic demo transport
+│   ├── demo_catalog.py       # prepared public/synthetic demo inputs
+│   └── demo_data.py          # seeded synthetic CSV generator
 ├── config/
 │   ├── models.yaml           # SYNTHESIS route (Nebius / Nemotron)
 │   └── sensor_relations/     # tool schemas and candidates
-├── samples/                  # four synthetic demo CSVs
+├── samples/                  # synthetic demo CSVs
 ├── benchmarks/               # W2-W5.5 evaluators and receipts
-├── tests/                    # 118 unit tests
+├── tests/                    # 129 unit tests
 └── docs: README, HOW_IT_WORKS, KNOWN_CHALLENGES, SUGGESTED_ACTIONS
 ```
 
@@ -246,10 +266,11 @@ DuckDB. Tool physics and sensor relationships live in YAML, parsed outside
 - Raw telemetry stays in the local analysis path. Model requests contain only a
   bounded structured evidence payload; an oversized request raises
   `PayloadTooLarge` instead of being truncated or sent.
-- External knowledge retrieval (Tavily/RAG) is not implemented. Wafer-map
-  spatial predicates need calibrated feature bounds. A measured naive-LLM
-  baseline is not yet recorded; the harness and an offline fixture exist, but
-  the fixture is not evidence about the live model.
+- Optional Tavily search is implemented for external references only; it is not
+  evidence and does not enter the gate. A full RAG/manual index is not
+  implemented. Wafer-map spatial predicates need calibrated feature bounds. The
+  live naive-LLM baseline is a single 5-case safety check (2/5 safe), not a broad
+  model comparison or an ablation study.
 - The live model is non-deterministic. The gate is deterministic; the narrative
   may be absent.
 

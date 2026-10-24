@@ -23,18 +23,11 @@
       "hypotheses": [
         {
           "cited_evidence": [
-            "EV_93EAD10BC5695C7C"
+            "EV_93EAD10BC5695C7C",
+            "EV_91A9D886A653B490"
           ],
           "hypothesis_class": "equipment_fault",
-          "root_cause": "instrumentation_fault",
-          "status": "INSUFFICIENT"
-        },
-        {
-          "cited_evidence": [
-            "EV_93EAD10BC5695C7C"
-          ],
-          "hypothesis_class": "equipment_fault",
-          "root_cause": "process_drift",
+          "root_cause": "equipment_fault",
           "status": "INSUFFICIENT"
         }
       ],
@@ -47,18 +40,11 @@
             "hypotheses": [
               {
                 "cited_evidence": [
-                  "EV_93EAD10BC5695C7C"
+                  "EV_93EAD10BC5695C7C",
+                  "EV_91A9D886A653B490"
                 ],
                 "hypothesis_class": "equipment_fault",
-                "root_cause": "instrumentation_fault",
-                "status": "INSUFFICIENT"
-              },
-              {
-                "cited_evidence": [
-                  "EV_93EAD10BC5695C7C"
-                ],
-                "hypothesis_class": "equipment_fault",
-                "root_cause": "process_drift",
+                "root_cause": "equipment_fault",
                 "status": "INSUFFICIENT"
               }
             ]
@@ -103,14 +89,16 @@
       "hypotheses": [
         {
           "cited_evidence": [
-            "EV_17F1860AD17CAED5"
+            "EV_8AA7075BB5C04B59",
+            "EV_FA975A2F1090134F",
+            "EV_F1EE703A24753413"
           ],
           "hypothesis_class": "experimental_unverified",
-          "root_cause": "process_drift",
+          "root_cause": "unknown",
           "status": "SUPPORTED"
         }
       ],
-      "input": "/tmp/tmpm0xrdz4u/unknown_named_tool.csv",
+      "input": "/tmp/tmpb4_euewh/unknown_named_tool.csv",
       "llm_calls": [
         {
           "model": "nvidia/Nemotron-3_5-Lightning",
@@ -124,6 +112,12 @@
                   "Coolant_Flow_sccm"
                 ],
                 "primary": "RF_Reflect_Power_W"
+              },
+              {
+                "corroborating": [
+                  "Coolant_Flow_sccm"
+                ],
+                "primary": "Chamber_Pressure_Pa"
               }
             ],
             "proposed_signals": [
@@ -153,10 +147,12 @@
             "hypotheses": [
               {
                 "cited_evidence": [
-                  "EV_17F1860AD17CAED5"
+                  "EV_8AA7075BB5C04B59",
+                  "EV_FA975A2F1090134F",
+                  "EV_F1EE703A24753413"
                 ],
                 "hypothesis_class": "experimental_unverified",
-                "root_cause": "process_drift",
+                "root_cause": "unknown",
                 "status": "SUPPORTED"
               }
             ]
@@ -194,14 +190,16 @@
       "hypotheses": [
         {
           "cited_evidence": [
-            "EV_C2A6AA487C337D42"
+            "EV_1B67B1B0E2A79009",
+            "EV_705C386067D2F9CF",
+            "EV_2532A974D8F0E576"
           ],
           "hypothesis_class": "experimental_unverified",
-          "root_cause": "instrumentation_fault",
+          "root_cause": "unknown",
           "status": "SUPPORTED"
         }
       ],
-      "input": "/tmp/tmpm0xrdz4u/opaque_export.csv",
+      "input": "/tmp/tmpb4_euewh/opaque_export.csv",
       "llm_calls": [
         {
           "model": "nvidia/Nemotron-3_5-Lightning",
@@ -244,10 +242,12 @@
             "hypotheses": [
               {
                 "cited_evidence": [
-                  "EV_C2A6AA487C337D42"
+                  "EV_1B67B1B0E2A79009",
+                  "EV_705C386067D2F9CF",
+                  "EV_2532A974D8F0E576"
                 ],
                 "hypothesis_class": "experimental_unverified",
-                "root_cause": "instrumentation_fault",
+                "root_cause": "unknown",
                 "status": "SUPPORTED"
               }
             ]
@@ -288,7 +288,7 @@
             "EV_6543D73C667AFB2B"
           ],
           "hypothesis_class": "equipment_fault",
-          "root_cause": "instrumentation_fault",
+          "root_cause": "equipment_fault",
           "status": "VETOED"
         }
       ],
@@ -304,7 +304,7 @@
                   "EV_6543D73C667AFB2B"
                 ],
                 "hypothesis_class": "equipment_fault",
-                "root_cause": "instrumentation_fault",
+                "root_cause": "equipment_fault",
                 "status": "VETOED"
               }
             ]
@@ -349,7 +349,7 @@
         "outcome": "INPUT_MALFORMED"
       },
       "hypotheses": [],
-      "input": "/tmp/tmpm0xrdz4u/broken.csv",
+      "input": "/tmp/tmpb4_euewh/broken.csv",
       "llm_calls": [],
       "mode": "safe",
       "model_called": false,
@@ -379,7 +379,7 @@
         "outcome": "NO_DATA_ROWS"
       },
       "hypotheses": [],
-      "input": "/tmp/tmpm0xrdz4u/header_only.csv",
+      "input": "/tmp/tmpb4_euewh/header_only.csv",
       "llm_calls": [],
       "mode": "safe",
       "model_called": false,
@@ -409,7 +409,7 @@
         "outcome": "INPUT_UNREADABLE"
       },
       "hypotheses": [],
-      "input": "/tmp/tmpm0xrdz4u/does-not-exist.csv",
+      "input": "/tmp/tmpb4_euewh/does-not-exist.csv",
       "llm_calls": [],
       "mode": "safe",
       "model_called": false,

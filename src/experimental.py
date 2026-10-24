@@ -7,6 +7,7 @@ from typing import Protocol
 
 from src.action_guidance import action_explanation, default_action_for
 from src.agents.mapping_request import (
+    DEFAULT_MAPPING_MAX_TOKENS,
     MappingEngine,
     MappingEnvelope,
     MappingValidationError,
@@ -15,7 +16,6 @@ from src.agents.mapping_request import (
     validate_mapping,
 )
 from src.agents.model_transport import ModelIntegrationError
-from src.agents.proposal_request import DEFAULT_MAX_TOKENS
 from src.agents.rca_engine import create_rca_engine
 from src.config_types import CandidateConfig
 from src.config_writer import (
@@ -33,6 +33,17 @@ from src.core.column_profile import (
 from src.core.constraints import ConstraintRule
 from src.core.duckdb_exec import extract_evidence
 from src.core.evidence import PayloadTooLarge
+from src.core.progress import (
+    STAGE_DUCKDB,
+    STAGE_GATE,
+    STAGE_MAPPING,
+    STAGE_MODEL,
+    STAGE_PYTHON,
+    STAGE_READ,
+    STAGE_TRIAGE,
+    ProgressCallback,
+    report,
+)
 from src.core.sufficiency import PredicateConfig
 from src.core.types import (
     AnalysisOutcome,
@@ -59,7 +70,7 @@ class MappingProposer(Protocol):
         self,
         candidates: tuple[ColumnProfile, ...],
         *,
-        max_tokens: int = DEFAULT_MAX_TOKENS,
+        max_tokens: int = DEFAULT_MAPPING_MAX_TOKENS,
     ) -> MappingEnvelope: ...
 
 
@@ -160,7 +171,8 @@ def analyze_experimental(
     *,
     engine_factory: EngineFactory = _live_engine_factory,
     mapping_factory: MappingFactory = _live_mapping_factory,
-    max_tokens: int = DEFAULT_MAX_TOKENS,
+    max_tokens: int = DEFAULT_MAPPING_MAX_TOKENS,
+    progress: ProgressCallback | None = None,
 ) -> ExperimentalResult:
     """Low-integration experimental triage: propose an unverified mapping, then scan.
 
@@ -173,7 +185,9 @@ def analyze_experimental(
     """
     path = Path(csv_path)
     bounded_note = (note or "")[:MAX_ENGINEER_NOTE_CHARS]
+    report(progress, STAGE_READ, "running")
     if not path.is_file():
+        report(progress, STAGE_READ, "failed")
         detail = "Input CSV is not readable; review the export path."
         return _result(
             path,
@@ -184,6 +198,7 @@ def analyze_experimental(
             model_called=False,
         )
     if path.stat().st_size == 0:
+        report(progress, STAGE_READ, "failed")
         detail = "The file has no header or readings; provide a non-empty export."
         return _result(
             path,
@@ -196,6 +211,7 @@ def analyze_experimental(
     try:
         profiles = profile_columns(path)
     except MalformedCsvError:
+        report(progress, STAGE_READ, "failed")
         detail = (
             "The file is not readable as a CSV (encoding or delimiter problem); "
             "re-export it as a UTF-8 CSV."
@@ -209,6 +225,7 @@ def analyze_experimental(
             model_called=False,
         )
     if not profiles or profiles[0].row_count == 0:
+        report(progress, STAGE_READ, "failed")
         detail = "The file has a header but no readings; nothing to triage."
         return _result(
             path,
@@ -219,8 +236,11 @@ def analyze_experimental(
             analysis_performed=False,
             model_called=False,
         )
+    report(progress, STAGE_READ, "done")
+    report(progress, STAGE_TRIAGE, "running")
     candidates = usable_candidates(profiles)
     if not candidates:
+        report(progress, STAGE_TRIAGE, "failed")
         detail = (
             "No usable numeric, non-constant columns were found; "
             "nothing to triage in experimental mode."
@@ -232,10 +252,13 @@ def analyze_experimental(
             detail,
             candidates=candidates,
         )
+    report(progress, STAGE_TRIAGE, "done")
+    report(progress, STAGE_MAPPING, "running")
     try:
         proposer = mapping_factory()
         envelope = proposer.propose_mapping(candidates, max_tokens=max_tokens)
     except PayloadTooLarge:
+        report(progress, STAGE_MAPPING, "failed")
         detail = (
             "Candidate summary exceeded the mapping request budget; "
             "reduce the column count."
@@ -248,6 +271,7 @@ def analyze_experimental(
             candidates=candidates,
         )
     except ModelIntegrationError as exc:
+        report(progress, STAGE_MAPPING, "failed")
         detail = f"Mapping model call failed ({exc.category.value})."
         return _result(
             path,
@@ -261,6 +285,7 @@ def analyze_experimental(
     try:
         mapping = validate_mapping(envelope, candidates)
     except MappingValidationError as exc:
+        report(progress, STAGE_MAPPING, "failed")
         detail = f"mapping_rejected: {exc}"
         return _result(
             path,
@@ -271,6 +296,7 @@ def analyze_experimental(
             analysis_performed=True,
             model_called=True,
         )
+    report(progress, STAGE_MAPPING, "done")
     signals = tuple(
         SignalSpec(
             name=item.column,
@@ -280,12 +306,16 @@ def analyze_experimental(
         )
         for item in mapping.signals
     )
+    report(progress, STAGE_DUCKDB, "running")
     evidence = extract_evidence(
         path,
         signals,
         computed_by=EXPERIMENTAL_COMPUTED_BY,
         provenance_tag=EXPERIMENTAL_PROVENANCE_TAG,
     )
+    report(progress, STAGE_DUCKDB, "done")
+    report(progress, STAGE_PYTHON, "running")
+    report(progress, STAGE_PYTHON, "done")
     primaries = frozenset(item.primary for item in mapping.relationships) or frozenset(
         item.column for item in mapping.signals
     )
@@ -314,6 +344,7 @@ def analyze_experimental(
         failure_mode="Not claimed; the mapping is unverified.",
         mechanism="Not claimed; the mapping is unverified.",
     )
+    report(progress, STAGE_MODEL, "running")
     try:
         output = engine.generate_hypotheses(
             evidence,
@@ -322,6 +353,8 @@ def analyze_experimental(
             candidate=candidate,
         )
     except PayloadTooLarge:
+        report(progress, STAGE_MODEL, "failed")
+        report(progress, STAGE_GATE, "failed")
         detail = (
             "Scoped evidence exceeded the model request budget; "
             "narrow the experimental mapping."
@@ -337,6 +370,12 @@ def analyze_experimental(
             analysis_performed=True,
             model_called=True,
         )
+    report(
+        progress,
+        STAGE_MODEL,
+        "done" if output.model_called else "skipped",
+    )
+    report(progress, STAGE_GATE, "done")
     output = output.model_copy(
         update={
             "outcome": AnalysisOutcome.EXPERIMENTAL_UNVERIFIED_MAPPING,

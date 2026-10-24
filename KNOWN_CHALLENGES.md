@@ -113,16 +113,18 @@ tool schema matches, automatically falls back to the experimental mapping
 
 ## 7. Downstream features and comparisons are not built
 
-* External knowledge retrieval (Tavily / local RAG) is not implemented.
+* Optional Tavily external references are implemented for inconclusive or
+  experimental runs, but they are not evidence and do not enter the gate. A
+  local manual/RAG index is not implemented.
 * Wafer-map spatial predicates need calibrated feature bounds before they can
   match; without them a spatial cause cannot be claimed.
 * Broad accuracy is not measured; results are tied to the configured
   relationships and are **not** field validation.
-* A measured naive-LLM baseline comparison is not yet recorded. The W4 positive
-  control is a gate check, not a baseline study; it does not show that the gate
-  beats an unconstrained model. The harness is
-  `benchmarks/evaluator/naive_llm_baseline.py`; its offline fixture is a harness
-  check, not a live measurement.
+* A single live naive-LLM baseline exists: **2/5 safe decisions** on the five
+  synthetic safety cases, with immediate-action over-claims on B4b, B4c, and
+  B4d. It is one small baseline, not a broad comparison or an ablation study.
+  The artifact is `benchmarks/evaluator/results/naive_llm_baseline.json`; its
+  offline fixture is only a harness check.
 
 ---
 

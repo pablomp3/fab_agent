@@ -25,6 +25,10 @@ from src.model_config import ModelRoute, load_api_key, load_model_route
 MAX_MAPPING_SIGNALS = 12
 MAX_MAPPING_RELATIONSHIPS = 5
 MAX_MAPPING_BYTES = 2048
+# The mapping response carries up to twelve signals plus relationship
+# rationales. The 256-token proposal default is too tight for that shape and
+# produced finish_reason=length on live Nemotron calls.
+DEFAULT_MAPPING_MAX_TOKENS = 768
 MAPPING_SYSTEM_PROMPT = (
     "Semiconductor data-mapping assistant. You are given CSV column names, "
     "inferred types, and bounded summary statistics only; no telemetry values. "

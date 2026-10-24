@@ -11,6 +11,7 @@ from benchmarks.evaluator.echo_transport import (
     offline_engine_factory,
     offline_mapping_factory,
 )
+from src.agents.mapping_request import DEFAULT_MAPPING_MAX_TOKENS
 from src.agents.proposal_request import DEFAULT_MAX_TOKENS
 from src.config_loader import load_relations
 from src.core.types import EvidenceKind
@@ -83,19 +84,21 @@ def default_cases() -> tuple[SuiteCase, ...]:
             csv_relative="benchmarks/datasets/tep/sample/IDV6_sample.csv",
             source="real_public_benchmark",
             note=TEP_FEED_NOTE,
-            # The TEP config declares no runnable scenario, so the safe path
-            # correctly abstains; the experimental path still maps the three
-            # channels and triages the excursion.
-            expected_safe_outcome="NO_MATCHING_TOOL_SCHEMA",
+            # The product TEP scenario declares the feed-system cause channels.
+            # IDV 6 moves them, so the safe path supports the configured
+            # candidate; the experimental path still maps the channels.
+            expected_safe_outcome="ANALYSIS_SUPPORTED",
             expected_experimental_outcome="EXPERIMENTAL_UNVERIFIED_MAPPING",
-            expectation_note="no runnable TEP scenario; experimental maps anyway",
+            expectation_note="feed-system cause channels move; safe path supports",
         ),
         SuiteCase(
             case_id="tep_idv3_abstain",
             csv_relative="benchmarks/datasets/tep/sample/IDV3_sample.csv",
             source="real_public_benchmark",
             note=TEP_ABSTAIN_NOTE,
-            expected_safe_outcome="NO_MATCHING_TOOL_SCHEMA",
+            # The same scenario is present, but the configured cause channels
+            # stay nominal for this disturbance, so the safe path abstains.
+            expected_safe_outcome="ANALYSIS_INCONCLUSIVE",
             expected_experimental_outcome="EXPERIMENTAL_UNVERIFIED_MAPPING",
             expectation_note="non-modeled disturbance; safe path abstains",
         ),
@@ -218,12 +221,12 @@ def run_case(case: SuiteCase, *, offline: bool, max_tokens: int) -> dict[str, ob
             case.note,
             engine_factory=offline_engine_factory(transport),
             mapping_factory=offline_mapping_factory(transport),
-            max_tokens=max_tokens,
+            max_tokens=DEFAULT_MAPPING_MAX_TOKENS,
         )
     else:
         safe = analyze_dossier(csv_path, case.note, max_tokens=max_tokens)
         experimental = analyze_experimental(
-            csv_path, case.note, max_tokens=max_tokens
+            csv_path, case.note, max_tokens=DEFAULT_MAPPING_MAX_TOKENS
         )
     return {
         "case_id": case.case_id,

@@ -14,6 +14,16 @@ from src.core.column_profile import MalformedCsvError
 from src.core.constraints import ConstraintRule
 from src.core.duckdb_exec import extract_evidence
 from src.core.evidence import PayloadTooLarge
+from src.core.progress import (
+    STAGE_DUCKDB,
+    STAGE_GATE,
+    STAGE_MODEL,
+    STAGE_PYTHON,
+    STAGE_READ,
+    STAGE_TRIAGE,
+    ProgressCallback,
+    report,
+)
 from src.core.sufficiency import PredicateConfig
 from src.core.types import (
     AnalysisOutcome,
@@ -120,6 +130,7 @@ def analyze_dossier(
     search_dir: str | Path = DEFAULT_SEARCH_DIR,
     engine_factory: EngineFactory = _live_engine_factory,
     max_tokens: int = DEFAULT_MAX_TOKENS,
+    progress: ProgressCallback | None = None,
 ) -> DossierResult:
     """Run the engineer-style flow: header triage, DuckDB evidence, gated model.
 
@@ -130,17 +141,21 @@ def analyze_dossier(
     """
     path = Path(csv_path)
     bounded_note = engineer_note[:MAX_ENGINEER_NOTE_CHARS]
+    report(progress, STAGE_READ, "running")
     if not path.is_file():
+        report(progress, STAGE_READ, "failed")
         detail = "Input CSV is not readable; review the export path."
         return _fail_result(
             path, bounded_note, AnalysisOutcome.INPUT_UNREADABLE, detail
         )
     if path.stat().st_size == 0:
+        report(progress, STAGE_READ, "failed")
         detail = "The file has no header or readings; provide a non-empty export."
         return _fail_result(path, bounded_note, AnalysisOutcome.NO_DATA_ROWS, detail)
     try:
         inspection = inspect_csv(path)
     except MalformedCsvError:
+        report(progress, STAGE_READ, "failed")
         detail = (
             "The file is not readable as a CSV (encoding or delimiter problem); "
             "re-export it as a UTF-8 CSV."
@@ -149,11 +164,15 @@ def analyze_dossier(
             path, bounded_note, AnalysisOutcome.INPUT_MALFORMED, detail
         )
     if inspection.row_count == 0:
+        report(progress, STAGE_READ, "failed")
         detail = "The file has a header but no readings; nothing to check."
         return _fail_result(path, bounded_note, AnalysisOutcome.NO_DATA_ROWS, detail)
+    report(progress, STAGE_READ, "done")
+    report(progress, STAGE_TRIAGE, "running")
     try:
         selection = select_profile(inspection.headers, engineer_note, search_dir)
     except NoMatchingProfile:
+        report(progress, STAGE_TRIAGE, "failed")
         detail = (
             "No configured tool profile matches the uploaded columns; "
             "review the export schema."
@@ -161,9 +180,15 @@ def analyze_dossier(
         return _fail_result(
             path, bounded_note, AnalysisOutcome.NO_MATCHING_TOOL_SCHEMA, detail
         )
+    report(progress, STAGE_TRIAGE, "done")
     relations = load_relations(selection.config_path)
     scenario = relations.scenarios[selection.scenario_name]
+    report(progress, STAGE_DUCKDB, "running")
     evidence = extract_evidence(path, scenario.signals)
+    report(progress, STAGE_DUCKDB, "done")
+    report(progress, STAGE_PYTHON, "running")
+    report(progress, STAGE_PYTHON, "done")
+    report(progress, STAGE_MODEL, "running")
     engine = engine_factory(scenario.predicate_config, scenario.rules)
     try:
         output = engine.generate_hypotheses(
@@ -174,6 +199,8 @@ def analyze_dossier(
             candidate=scenario.candidate,
         )
     except PayloadTooLarge:
+        report(progress, STAGE_MODEL, "failed")
+        report(progress, STAGE_GATE, "failed")
         detail = (
             "Evidence summary exceeded the model request budget; "
             "narrow the channel scope."
@@ -187,6 +214,12 @@ def analyze_dossier(
             AnalysisOutcome.EVIDENCE_TOO_LARGE,
             detail,
         )
+    report(
+        progress,
+        STAGE_MODEL,
+        "done" if output.model_called else "skipped",
+    )
+    report(progress, STAGE_GATE, "done")
     return DossierResult(
         str(path),
         bounded_note,

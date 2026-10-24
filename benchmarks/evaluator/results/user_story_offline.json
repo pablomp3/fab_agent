@@ -89,17 +89,17 @@
       "hypotheses": [
         {
           "cited_evidence": [
-            "EV_AC237CA0D5887E5E",
-            "EV_EC515A0B0C1F3DE0",
-            "EV_8FFEB88061CD585B",
-            "EV_DBEF382FC25BF4C4"
+            "EV_DFD792F4A593FD92",
+            "EV_7C142B337A92F834",
+            "EV_A49C3DAFAB16A66E",
+            "EV_8B72566306EFBDEC"
           ],
           "hypothesis_class": "experimental_unverified",
-          "root_cause": "equipment_fault",
+          "root_cause": "unknown",
           "status": "INSUFFICIENT"
         }
       ],
-      "input": "/tmp/tmpm73142xg/unknown_named_tool.csv",
+      "input": "/tmp/tmpdhh34mlj/unknown_named_tool.csv",
       "llm_calls": [
         {
           "model": "nvidia/Nemotron-3_5-Lightning",
@@ -119,22 +119,22 @@
             "proposed_signals": [
               {
                 "column": "timestamp",
-                "role_guess": "experimental_candidate",
+                "role_guess": "candidate_sensor",
                 "unit_guess": null
               },
               {
                 "column": "RF_Reflect_Power_W",
-                "role_guess": "experimental_candidate",
+                "role_guess": "rf_power_candidate",
                 "unit_guess": null
               },
               {
                 "column": "Chamber_Pressure_Pa",
-                "role_guess": "experimental_candidate",
+                "role_guess": "pressure_candidate",
                 "unit_guess": null
               },
               {
                 "column": "Coolant_Flow_sccm",
-                "role_guess": "experimental_candidate",
+                "role_guess": "flow_candidate",
                 "unit_guess": null
               }
             ]
@@ -148,13 +148,13 @@
             "hypotheses": [
               {
                 "cited_evidence": [
-                  "EV_AC237CA0D5887E5E",
-                  "EV_EC515A0B0C1F3DE0",
-                  "EV_8FFEB88061CD585B",
-                  "EV_DBEF382FC25BF4C4"
+                  "EV_DFD792F4A593FD92",
+                  "EV_7C142B337A92F834",
+                  "EV_A49C3DAFAB16A66E",
+                  "EV_8B72566306EFBDEC"
                 ],
                 "hypothesis_class": "experimental_unverified",
-                "root_cause": "equipment_fault",
+                "root_cause": "unknown",
                 "status": "INSUFFICIENT"
               }
             ]
@@ -192,16 +192,16 @@
       "hypotheses": [
         {
           "cited_evidence": [
-            "EV_B2589439A1314F07",
-            "EV_4A18A7687559C315",
-            "EV_28D58D7FDC7CAC84"
+            "EV_EE490E617A73A418",
+            "EV_5CD250E0F1A3C95B",
+            "EV_56549374D0352206"
           ],
           "hypothesis_class": "experimental_unverified",
-          "root_cause": "equipment_fault",
+          "root_cause": "unknown",
           "status": "SUPPORTED"
         }
       ],
-      "input": "/tmp/tmpm73142xg/opaque_export.csv",
+      "input": "/tmp/tmpdhh34mlj/opaque_export.csv",
       "llm_calls": [
         {
           "model": "nvidia/Nemotron-3_5-Lightning",
@@ -220,17 +220,17 @@
             "proposed_signals": [
               {
                 "column": "a",
-                "role_guess": "experimental_candidate",
+                "role_guess": "candidate_sensor",
                 "unit_guess": null
               },
               {
                 "column": "b",
-                "role_guess": "experimental_candidate",
+                "role_guess": "candidate_sensor",
                 "unit_guess": null
               },
               {
                 "column": "c",
-                "role_guess": "experimental_candidate",
+                "role_guess": "candidate_sensor",
                 "unit_guess": null
               }
             ]
@@ -244,12 +244,12 @@
             "hypotheses": [
               {
                 "cited_evidence": [
-                  "EV_B2589439A1314F07",
-                  "EV_4A18A7687559C315",
-                  "EV_28D58D7FDC7CAC84"
+                  "EV_EE490E617A73A418",
+                  "EV_5CD250E0F1A3C95B",
+                  "EV_56549374D0352206"
                 ],
                 "hypothesis_class": "experimental_unverified",
-                "root_cause": "equipment_fault",
+                "root_cause": "unknown",
                 "status": "SUPPORTED"
               }
             ]
@@ -287,10 +287,7 @@
       "hypotheses": [
         {
           "cited_evidence": [
-            "EV_6543D73C667AFB2B",
-            "EV_7E789DF601101150",
-            "EV_64C2CBD9DF3E9D41",
-            "EV_4876F037859A989A"
+            "EV_6543D73C667AFB2B"
           ],
           "hypothesis_class": "equipment_fault",
           "root_cause": "equipment_fault",
@@ -306,10 +303,7 @@
             "hypotheses": [
               {
                 "cited_evidence": [
-                  "EV_6543D73C667AFB2B",
-                  "EV_7E789DF601101150",
-                  "EV_64C2CBD9DF3E9D41",
-                  "EV_4876F037859A989A"
+                  "EV_6543D73C667AFB2B"
                 ],
                 "hypothesis_class": "equipment_fault",
                 "root_cause": "equipment_fault",
@@ -357,7 +351,7 @@
         "outcome": "INPUT_MALFORMED"
       },
       "hypotheses": [],
-      "input": "/tmp/tmpm73142xg/broken.csv",
+      "input": "/tmp/tmpdhh34mlj/broken.csv",
       "llm_calls": [],
       "mode": "safe",
       "model_called": false,
@@ -387,7 +381,7 @@
         "outcome": "NO_DATA_ROWS"
       },
       "hypotheses": [],
-      "input": "/tmp/tmpm73142xg/header_only.csv",
+      "input": "/tmp/tmpdhh34mlj/header_only.csv",
       "llm_calls": [],
       "mode": "safe",
       "model_called": false,
@@ -417,7 +411,7 @@
         "outcome": "INPUT_UNREADABLE"
       },
       "hypotheses": [],
-      "input": "/tmp/tmpm73142xg/does-not-exist.csv",
+      "input": "/tmp/tmpdhh34mlj/does-not-exist.csv",
       "llm_calls": [],
       "mode": "safe",
       "model_called": false,

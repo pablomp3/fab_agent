@@ -79,6 +79,8 @@ class ExternalSourceModel(BaseModel):
 
     url: str
     why_consulted: str
+    title: str | None = None
+    snippet: str | None = None
 
 
 class RCAOutputModel(BaseModel):

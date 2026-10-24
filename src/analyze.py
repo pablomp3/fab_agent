@@ -1,10 +1,11 @@
 from __future__ import annotations
 
 from collections.abc import Mapping
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from pathlib import Path
 
 from src.agents.mapping_request import (
+    DEFAULT_MAPPING_MAX_TOKENS,
     MappingEngine,
     ValidatedMapping,
     create_mapping_engine,
@@ -12,6 +13,11 @@ from src.agents.mapping_request import (
 from src.agents.proposal_request import DEFAULT_MAX_TOKENS
 from src.agents.rca_engine import create_rca_engine
 from src.core.constraints import ConstraintRule
+from src.core.progress import (
+    STAGE_TAVILY,
+    ProgressCallback,
+    report,
+)
 from src.core.sufficiency import PredicateConfig
 from src.core.types import AnalysisOutcome, Evidence, SuggestedAction
 from src.dossier import (
@@ -27,7 +33,13 @@ from src.experimental import (
     MappingFactory,
     analyze_experimental,
 )
-from src.schemas.models import RCAOutputModel
+from src.schemas.models import ExternalSourceModel, RCAOutputModel
+from src.tools.tavily_search import (
+    TavilyError,
+    TavilySearch,
+    build_tavily_query,
+    tavily_client_from_environment,
+)
 from src.triage import ProfileSelection
 
 # The safe path is tried first. Only when it has no matching tool schema does
@@ -66,6 +78,9 @@ class RunResult:
     evidence: tuple[Evidence, ...]
     output: RCAOutputModel
     draft_yaml: str | None = None
+    external_search_query: str | None = None
+    external_search_status: str = "not_run"
+    external_search_count: int = 0
 
 
 def _from_dossier(result: DossierResult) -> RunResult:
@@ -107,6 +122,83 @@ def _from_experimental(result: ExperimentalResult) -> RunResult:
     )
 
 
+_EXTERNAL_SEARCH_OUTCOMES = frozenset(
+    {
+        AnalysisOutcome.ANALYSIS_INCONCLUSIVE,
+        AnalysisOutcome.EXPERIMENTAL_UNVERIFIED_MAPPING,
+    }
+)
+
+
+def _with_external_search(
+    result: RunResult,
+    tavily_search: TavilySearch | None,
+    *,
+    enabled: bool,
+    progress: ProgressCallback | None = None,
+) -> RunResult:
+    """Attach optional Tavily references without touching the Python verdict.
+
+    The search is attempted only for an inconclusive or experimental run. It
+    cannot add evidence, change a citation, or change the action.
+    """
+    if not enabled:
+        report(progress, STAGE_TAVILY, "skipped")
+        return replace(result, external_search_status="disabled")
+    if result.outcome not in _EXTERNAL_SEARCH_OUTCOMES:
+        report(progress, STAGE_TAVILY, "skipped")
+        return replace(result, external_search_status="not_needed")
+    client = (
+        tavily_search
+        if tavily_search is not None
+        else tavily_client_from_environment()
+    )
+    if client is None:
+        report(progress, STAGE_TAVILY, "skipped")
+        return replace(result, external_search_status="not_configured")
+    claim = (
+        result.output.hypotheses[0].claim
+        if result.output.hypotheses
+        else "semiconductor tool anomaly"
+    )
+    query = build_tavily_query(result.evidence, claim)
+    report(progress, STAGE_TAVILY, "running")
+    try:
+        references = client.search(query, max_results=3)
+    except TavilyError:
+        report(progress, STAGE_TAVILY, "failed")
+        return replace(
+            result,
+            external_search_query=query,
+            external_search_status="unavailable",
+        )
+    sources = [
+        ExternalSourceModel(
+            url=reference.url,
+            why_consulted=f"Tavily search: {query}",
+            title=reference.title or None,
+            snippet=reference.snippet or None,
+        )
+        for reference in references
+    ]
+    output = result.output.model_copy(
+        update={
+            "external_sources": [
+                *result.output.external_sources,
+                *sources,
+            ]
+        }
+    )
+    report(progress, STAGE_TAVILY, "done")
+    return replace(
+        result,
+        output=output,
+        external_search_query=query,
+        external_search_status="completed",
+        external_search_count=len(sources),
+    )
+
+
 def analyze_csv(
     csv_path: str | Path,
     engineer_note: str = "",
@@ -115,12 +207,17 @@ def analyze_csv(
     engine_factory: EngineFactory | None = None,
     mapping_factory: MappingFactory | None = None,
     max_tokens: int = DEFAULT_MAX_TOKENS,
+    mapping_max_tokens: int = DEFAULT_MAPPING_MAX_TOKENS,
+    tavily_search: TavilySearch | None = None,
+    enable_external_search: bool = True,
+    progress: ProgressCallback | None = None,
 ) -> RunResult:
     """Run the safe path, then fall back to experimental only when no schema matches.
 
     The deterministic safe path always runs first. The experimental mapping runs
     only for ``NO_MATCHING_TOOL_SCHEMA``; its output stays unverified and it
-    never claims a physical root cause.
+    never claims a physical root cause. Optional Tavily references are attached
+    after the gate and never change it.
     """
     active_engine: EngineFactory = (
         engine_factory if engine_factory is not None else _live_engine_factory
@@ -135,17 +232,29 @@ def analyze_csv(
         search_dir=search_dir,
         engine_factory=active_engine,
         max_tokens=max_tokens,
+        progress=progress,
     )
     if safe.outcome is not FALLBACK_OUTCOME:
-        return _from_dossier(safe)
+        return _with_external_search(
+            _from_dossier(safe),
+            tavily_search,
+            enabled=enable_external_search,
+            progress=progress,
+        )
     experimental = analyze_experimental(
         csv_path,
         engineer_note,
         engine_factory=active_engine,
         mapping_factory=active_mapping,
-        max_tokens=max_tokens,
+        max_tokens=mapping_max_tokens,
+        progress=progress,
     )
-    return _from_experimental(experimental)
+    return _with_external_search(
+        _from_experimental(experimental),
+        tavily_search,
+        enabled=enable_external_search,
+        progress=progress,
+    )
 
 
 __all__ = ["RunResult", "analyze_csv"]
