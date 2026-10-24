@@ -114,7 +114,9 @@ def _truth(case_id: str) -> dict[str, object]:
     outcomes: dict[str, dict[str, object]] = {
         "B4a": {
             "expected_verdict": "VETOED",
-            "allowed_actions": ["ESCALATE_TO_ENGINEER"],
+            # Preserve the pre-registered disposition vocabulary. The evaluator
+            # maps ESCALATE to the current typed ESCALATE_TO_ENGINEER action.
+            "allowed_dispositions": ["ESCALATE"],
             "expected_predicates": {"has_instrumentation_contradiction": True},
             "expected_evidence": {
                 "sensor_17": {"allowed_kinds": ["SENSOR_ANOMALY"]},
@@ -134,7 +136,7 @@ def _truth(case_id: str) -> dict[str, object]:
         },
         "B4b": {
             "expected_verdict": "INSUFFICIENT",
-            "allowed_actions": ["ESCALATE_TO_ENGINEER"],
+            "allowed_dispositions": ["ESCALATE"],
             "expected_predicates": {"has_primary_signal_anomaly": False},
             "expected_evidence": {
                 "thermal_sensor": {
@@ -145,7 +147,7 @@ def _truth(case_id: str) -> dict[str, object]:
         },
         "B4c": {
             "expected_verdict": "INSUFFICIENT",
-            "allowed_actions": ["ESCALATE_TO_ENGINEER"],
+            "allowed_dispositions": ["HOLD_LOT", "ESCALATE"],
             "expected_predicates": {"has_cross_tool_temporal_precedence": False},
             "expected_evidence": {
                 "met_cd_bias": {
@@ -164,7 +166,7 @@ def _truth(case_id: str) -> dict[str, object]:
         },
         "B4d": {
             "expected_verdict": "INSUFFICIENT",
-            "allowed_actions": ["ESCALATE_TO_ENGINEER"],
+            "allowed_dispositions": ["ESCALATE"],
             "expected_predicates": {"has_missing_required_evidence": True},
             "expected_evidence": {
                 "chamber_pressure": {"allowed_kinds": ["SENSOR_ANOMALY"]},
@@ -173,7 +175,7 @@ def _truth(case_id: str) -> dict[str, object]:
         },
         "B4e": {
             "expected_verdict": "SUPPORTED",
-            "allowed_actions": ["ESCALATE_TO_ENGINEER"],
+            "allowed_dispositions": ["ESCALATE"],
             "expected_predicates": {
                 "has_primary_signal_anomaly": True,
                 "has_instrumentation_contradiction": False,

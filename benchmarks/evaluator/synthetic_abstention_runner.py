@@ -21,6 +21,31 @@ from src.core.sufficiency import derive_predicates
 from src.core.types import Evidence, PredicateSet, SuggestedAction, Verdict
 
 _CASE_IDS = ("B4a", "B4b", "B4c", "B4d")
+_DISPOSITION_TO_ACTION = {
+    "ESCALATE": SuggestedAction.ESCALATE_TO_ENGINEER.value,
+}
+
+
+def _allowed_actions(truth: dict[str, object]) -> object:
+    """Read the current action schema or the original pre-registered one.
+
+    The benchmark truth was committed before the product existed and used the
+    word "disposition". The product later adopted a typed action enum. Mapping
+    the old ``ESCALATE`` disposition here keeps the original truth intact
+    instead of rewriting it to fit the implementation.
+    """
+    actions = truth.get("allowed_actions")
+    if isinstance(actions, list):
+        return actions
+    dispositions = truth.get("allowed_dispositions")
+    if not isinstance(dispositions, list):
+        return None
+    mapped: list[str] = []
+    for item in dispositions:
+        if not isinstance(item, str):
+            return None
+        mapped.append(_DISPOSITION_TO_ACTION.get(item, item))
+    return mapped
 
 
 def _read_object(path: Path) -> dict[str, object]:
@@ -95,7 +120,7 @@ def _matches_truth(
     if truth.get("case_id") != case_id:
         raise ValueError(f"ground truth case id mismatch for {case_id}")
     expected_verdict = truth.get("expected_verdict")
-    allowed = truth.get("allowed_actions")
+    allowed = _allowed_actions(truth)
     expected_predicates = truth.get("expected_predicates")
     if not isinstance(allowed, list) or not isinstance(expected_predicates, dict):
         raise ValueError(f"malformed ground truth for {case_id}")
