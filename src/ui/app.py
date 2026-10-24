@@ -447,10 +447,10 @@ def _progress_markdown(
         lines.append(f"{icon} {label}")
     if result is not None:
         lines.append(
-            f"{_STAGE_ICONS['done']} Result: {_result_progress_text(result)}"
+            f":material/flag: Result: {_result_progress_text(result)}"
         )
         lines.append(
-            f"{_STAGE_ICONS['done']} Next action: "
+            f":material/arrow_forward: Next action: "
             f"{action_label(result.suggested_next_action)}"
         )
     return "\n\n".join(lines)
