@@ -97,9 +97,7 @@ def profile_columns(
                 ).fetchall(),
             )
         except duckdb.Error as exc:
-            raise MalformedCsvError(
-                f"{path.name} is not readable as a CSV"
-            ) from exc
+            raise MalformedCsvError(f"{path.name} is not readable as a CSV") from exc
         for row in describe_rows[:max_columns]:
             name = str(row[0])
             declared_type = str(row[1])

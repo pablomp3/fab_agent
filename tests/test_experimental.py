@@ -5,6 +5,8 @@ import unittest
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
+import yaml
+
 from benchmarks.evaluator.echo_transport import (
     ExperimentalEchoTransport,
     offline_engine_factory,
@@ -231,11 +233,22 @@ class ExperimentalFlowTests(unittest.TestCase):
         self.assertTrue(
             any(item.kind is EvidenceKind.SENSOR_ANOMALY for item in result.evidence)
         )
+        # Auto mode has no saved check: the cause finder may propose, but Python
+        # cannot mark it supported.
+        self.assertFalse(result.output.hypotheses)
         self.assertTrue(
-            any(
-                item.status.value == "SUPPORTED"
-                for item in result.output.hypotheses
+            any(item.proposed_by_model for item in result.output.differential)
+        )
+        self.assertTrue(
+            all(
+                item.status.value == "INSUFFICIENT"
+                for item in result.output.differential
+                if item.proposed_by_model
             )
+        )
+        self.assertIn(
+            "Review the draft mapping",
+            " ".join(result.output.required_next_checks),
         )
         # The model never sets the outcome or an unsafe action.
         self.assertNotIn("HOLD_LOT", result.output.model_dump_json())
@@ -254,11 +267,18 @@ class ExperimentalFlowTests(unittest.TestCase):
             draft_path = Path(temp_dir) / "draft.yaml"
             draft_path.write_text(result.draft_yaml, encoding="utf-8")
             relations = load_relations(draft_path)
+            parsed = yaml.safe_load(result.draft_yaml)
 
-        self.assertIn("experimental_scope", relations.scenarios)
-        scenario = relations.scenarios["experimental_scope"]
-        self.assertIn("experimental_unverified", scenario.rules)
-        self.assertTrue(all(item.unit is None for item in scenario.signals))
+        self.assertEqual(parsed["version"], 2)
+        self.assertEqual(parsed["checks"], [])
+        self.assertEqual(parsed["baseline"]["mode"], "lead_in")
+        self.assertFalse(relations.scenarios)
+        self.assertTrue(relations.signals)
+        self.assertTrue(all(item.unit is None for item in relations.signals))
+        self.assertEqual(
+            set(relations.signal_labels),
+            {item.name for item in relations.signals},
+        )
 
     def test_rejected_mapping_fails_closed_without_scan(self) -> None:
         transport = _BadMappingTransport()
@@ -324,9 +344,7 @@ class ColumnProfileTests(unittest.TestCase):
         self.assertFalse(by_name["value"].constant)
         self.assertTrue(by_name["flag"].constant)
         self.assertFalse(by_name["name"].numeric)
-        self.assertEqual(
-            [item.name for item in usable_candidates(profiles)], ["value"]
-        )
+        self.assertEqual([item.name for item in usable_candidates(profiles)], ["value"])
 
 
 if __name__ == "__main__":

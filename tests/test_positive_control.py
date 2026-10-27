@@ -18,7 +18,7 @@ from src.core.types import EvidenceKind, Verdict
 from src.model_config import ModelRoute
 
 ROOT = Path(__file__).resolve().parents[1]
-POSITIVE_CONFIG = ROOT / "config/sensor_relations/synthetic_twin_positive.yaml"
+POSITIVE_CONFIG = ROOT / "benchmarks/evaluator/fixtures/v1/synthetic_twin_positive.yaml"
 
 
 class _AlternatingTransport:

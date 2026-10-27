@@ -35,9 +35,7 @@ def tep_suite(root: Path) -> RealDataSuite:
                 case_id=f"IDV{idv}",
                 csv_path=processed / f"IDV{idv}.csv",
                 nominal_baseline_path=processed / f"IDV{idv}_nominal.csv",
-                expected_verdict=(
-                    "SUPPORTED" if idv in supported else "INSUFFICIENT"
-                ),
+                expected_verdict=("SUPPORTED" if idv in supported else "INSUFFICIENT"),
                 expected_actions=("ESCALATE_TO_ENGINEER",),
                 subsystem="feed_system",
             )
@@ -51,6 +49,7 @@ def tep_suite(root: Path) -> RealDataSuite:
 
 def phm_suite(root: Path) -> RealDataSuite:
     processed = root / "benchmarks" / "datasets" / "phm2018" / "processed"
+    nominal = root / "benchmarks" / "datasets" / "phm2018" / "sample"
     return RealDataSuite(
         name="PHM 2018 Ion Mill",
         config_path=root / "config" / "sensor_relations" / "ion_mill_phm18.yaml",
@@ -58,9 +57,9 @@ def phm_suite(root: Path) -> RealDataSuite:
             RealDataCase(
                 case_id="M02_DC_01",
                 csv_path=processed / "01_M02_DC_score.csv",
-                nominal_baseline_path=processed / "01_M02_DC_score_nominal.csv",
-                expected_verdict="SUPPORTED",
-                expected_actions=("INSPECT_COMPONENT",),
+                nominal_baseline_path=nominal / "M02_DC_01_nominal_sample.csv",
+                expected_verdict="INSUFFICIENT",
+                expected_actions=("ESCALATE_TO_ENGINEER",),
                 subsystem="flowcool",
             ),
         ),

@@ -7,7 +7,7 @@
   },
   "case_id": "B4b",
   "configuration_revision": "sha256:890a0eca52708b01de01da4da6288e5451a6edc3ea644fd5aae3c8a5cc78f475",
-  "generator_revision": "sha256:578c8ac110d6c353056bc99102a8852c30059891a7be9c9c9ce27b865d825897",
+  "generator_revision": "sha256:5f1da9f950d09c80c0a19c75ec1e8c12cde2e923c1ee027feee19f7666e951a7",
   "mutations": {
     "thermal_sensor": {
       "flatline_value": 10.0,

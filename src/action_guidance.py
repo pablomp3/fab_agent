@@ -26,21 +26,21 @@ _DEFAULT_ACTION: dict[AnalysisOutcome, SuggestedAction] = {
 
 # A short, user-facing label. Displayed next to the outcome; never the raw enum.
 _LABEL: dict[SuggestedAction, str] = {
-    SuggestedAction.FIX_INPUT_FILE: "Fix the file path",
-    SuggestedAction.FIX_FILE_FORMAT: "Re-export the file",
-    SuggestedAction.PROVIDE_MORE_DATA: "Provide data rows",
+    SuggestedAction.FIX_INPUT_FILE: "Fix the file",
+    SuggestedAction.FIX_FILE_FORMAT: "Fix the file",
+    SuggestedAction.PROVIDE_MORE_DATA: "Provide more data",
     SuggestedAction.CHECK_COLUMN_FORMAT: "Check the columns",
-    SuggestedAction.AUTHOR_TOOL_CONFIG: "Add a tool schema",
+    SuggestedAction.AUTHOR_TOOL_CONFIG: "Describe the machine",
     SuggestedAction.FIX_COLUMNS_AND_RETRY: "Fix the columns and retry",
-    SuggestedAction.REVIEW_DRAFT_MAPPING: "Review the draft mapping",
+    SuggestedAction.REVIEW_DRAFT_MAPPING: "Review the guessed columns",
     SuggestedAction.REDUCE_CHANNELS: "Use fewer channels",
-    SuggestedAction.RETRY_ANALYSIS: "Retry the analysis",
+    SuggestedAction.RETRY_ANALYSIS: "Try again",
     SuggestedAction.REVIEW_CHANNEL_FINDINGS: "Review the channel findings",
-    SuggestedAction.COLLECT_MORE_DATA: "Collect more data",
-    SuggestedAction.REVIEW_CONTRADICTION: "Check the contradiction",
-    SuggestedAction.INSPECT_COMPONENT: "Inspect the component",
-    SuggestedAction.CONTINUE_MONITORING: "Continue monitoring",
-    SuggestedAction.ESCALATE_TO_ENGINEER: "Escalate to an engineer",
+    SuggestedAction.COLLECT_MORE_DATA: "Get the missing data",
+    SuggestedAction.REVIEW_CONTRADICTION: "Check the sensor first",
+    SuggestedAction.INSPECT_COMPONENT: "Inspect the part",
+    SuggestedAction.CONTINUE_MONITORING: "Keep monitoring",
+    SuggestedAction.ESCALATE_TO_ENGINEER: "Ask an engineer to review",
 }
 
 # One short sentence of context so the user understands why. Deterministic
@@ -62,8 +62,8 @@ _EXPLANATION: dict[SuggestedAction, str] = {
         "sensor columns are numeric and not frozen."
     ),
     SuggestedAction.AUTHOR_TOOL_CONFIG: (
-        "This export does not match any configured tool. Add a tool config, or "
-        "try experimental mode for a first look."
+        "This export does not match a saved tool model. Describe the machine "
+        "and save a model, so the next run is deterministic."
     ),
     SuggestedAction.FIX_COLUMNS_AND_RETRY: (
         "The suggested channel mapping could not be used (a column was unknown, "
@@ -71,8 +71,8 @@ _EXPLANATION: dict[SuggestedAction, str] = {
         "export and retry."
     ),
     SuggestedAction.REVIEW_DRAFT_MAPPING: (
-        "I inferred these channels from names and statistics. This is unverified, "
-        "so review the draft config before trusting any result."
+        "The columns were guessed from names and statistics. This is unverified, "
+        "so review the guessed columns before trusting any result."
     ),
     SuggestedAction.REDUCE_CHANNELS: (
         "More channels were selected than fit in one safe pass. Use fewer "
@@ -87,20 +87,20 @@ _EXPLANATION: dict[SuggestedAction, str] = {
         "still valid, so review them directly."
     ),
     SuggestedAction.COLLECT_MORE_DATA: (
-        "Nothing was proven. Review what moved and what was missing, then decide "
-        "whether to collect more data."
+        "The data is not enough to confirm or rule out a cause. Get the missing "
+        "readings or a longer run, then try again."
     ),
     SuggestedAction.REVIEW_CONTRADICTION: (
-        "Two signals disagree, so the proposed cause is rejected. Check whether a "
-        "sensor is faulty or the channels are mislabeled."
+        "One signal moved while the sensor that should agree stayed normal. "
+        "Check the sensor first; do not change the recipe."
     ),
     SuggestedAction.INSPECT_COMPONENT: (
-        "The evidence supports a fault. Inspect the named component; a human "
-        "decides the action."
+        "The evidence supports a fault. Inspect the named part; a human decides "
+        "the action."
     ),
     SuggestedAction.CONTINUE_MONITORING: (
-        "The evidence supports a fault but it is not urgent; keep monitoring the "
-        "channel."
+        "No fault pattern was found in the checked signals. Keep monitoring "
+        "the channel and re-run if the tool behaviour changes."
     ),
     SuggestedAction.ESCALATE_TO_ENGINEER: (
         "A human should review this run before any action is taken."

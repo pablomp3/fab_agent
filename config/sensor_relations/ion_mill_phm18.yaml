@@ -1,37 +1,25 @@
-version: 1
-name: ion_mill_phm18
-provenance: "PHM 2018 documented signal groups"
+tool:
+  name: ion_mill_phm18
+  label: Ion mill (PHM 2018)
+  description: "PHM 2018 documented channels. Units and limits are not asserted beyond the recorded alert multiplier."
+baseline:
+  mode: nominal_file
+  file: ../../benchmarks/datasets/phm2018/sample/M02_DC_01_nominal_sample.csv
 signals:
-  - {name: FLOWCOOLFLOWRATE, unit: null, robust_z_threshold: null, threshold_source: null}
-  - {name: FLOWCOOLPRESSURE, unit: null, robust_z_threshold: null, threshold_source: null}
-  - {name: IONGAUGEPRESSURE, unit: null, robust_z_threshold: null, threshold_source: null}
-  - {name: ETCHBEAMVOLTAGE, unit: null, robust_z_threshold: null, threshold_source: null}
-  - {name: ETCHBEAMCURRENT, unit: null, robust_z_threshold: null, threshold_source: null}
-  - {name: ETCHSUPPRESSORVOLTAGE, unit: null, robust_z_threshold: null, threshold_source: null}
-  - {name: ETCHSUPPRESSORCURRENT, unit: null, robust_z_threshold: null, threshold_source: null}
-groups:
-  flowcool: [FLOWCOOLFLOWRATE, FLOWCOOLPRESSURE]
-  chamber: [IONGAUGEPRESSURE]
-  ion_source: [ETCHBEAMVOLTAGE, ETCHBEAMCURRENT, ETCHSUPPRESSORVOLTAGE, ETCHSUPPRESSORCURRENT]
-roles:
-  beam_voltage: [ETCHBEAMVOLTAGE]
-  grid_current: [ETCHBEAMCURRENT]
-scenarios:
-  flowcool:
-    signals:
-      - {name: FLOWCOOLFLOWRATE, unit: null, robust_z_threshold: 3.5, threshold_source: "standard_robust_mad_multiplier=3.5"}
-      - {name: FLOWCOOLPRESSURE, unit: null, robust_z_threshold: 3.5, threshold_source: "standard_robust_mad_multiplier=3.5"}
-    predicates:
-      primary_signals: [FLOWCOOLFLOWRATE, FLOWCOOLPRESSURE]
-    rules:
-      equipment_fault:
-        require_all: [has_primary_signal_anomaly]
-        forbid_any: [has_missing_required_evidence]
-    candidate:
-      claim: flowcool subsystem fault
-      hypothesis_class: equipment_fault
-      cited_signals: [FLOWCOOLFLOWRATE, FLOWCOOLPRESSURE]
-      root_cause: equipment_fault
-      failure_mode: Flowcool subsystem fault; confirm the specific mode during inspection.
-      mechanism: The configured relationship links coolant flow and pressure; the physical mechanism is not asserted by this configuration.
-    supported_action: INSPECT_COMPONENT
+  - {name: FLOWCOOLFLOWRATE, label: Coolant flow, unit: null, alert_at: 3.5}
+  - {name: FLOWCOOLPRESSURE, label: Coolant pressure, unit: null, alert_at: 3.5}
+  - {name: IONGAUGEPRESSURE, label: Ion gauge pressure, unit: null, alert_at: 3.5}
+  - {name: ETCHBEAMVOLTAGE, label: Beam voltage, unit: null, alert_at: 3.5}
+  - {name: ETCHBEAMCURRENT, label: Beam current, unit: null, alert_at: 3.5}
+  - {name: ETCHSUPPRESSORVOLTAGE, label: Suppressor voltage, unit: null, alert_at: 3.5}
+  - {name: ETCHSUPPRESSORCURRENT, label: Suppressor current, unit: null, alert_at: 3.5}
+checks:
+  - id: coolant_loop
+    label: Coolant loop fault
+    kind: equipment_fault
+    must_be_unusual:
+      - {signal: FLOWCOOLFLOWRATE, direction: any}
+      - {signal: FLOWCOOLPRESSURE, direction: any}
+    must_stay_normal: []
+    action: INSPECT_COMPONENT
+    advice: "Inspect the coolant loop and its sensors. Do not adjust the recipe."

@@ -130,9 +130,7 @@ def build_proposal_request(
     user_object: dict[str, object] = {"evidence": evidence_items}
     if context:
         user_object["context"] = context
-    user_payload = json.dumps(
-        user_object, ensure_ascii=False, separators=(",", ":")
-    )
+    user_payload = json.dumps(user_object, ensure_ascii=False, separators=(",", ":"))
     body = json.dumps(
         {
             "model": model,

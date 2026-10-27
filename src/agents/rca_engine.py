@@ -7,6 +7,30 @@ from pathlib import Path
 from pydantic import ValidationError
 
 from src.action_guidance import action_explanation, default_action_for
+from src.agents.differential import (
+    CheckOutcome,
+    action_for,
+    assess_check,
+    build_differential_entry,
+    build_hypothesis,
+    build_unconfigured_entry,
+    choose_headline,
+    configured_scope,
+    with_challenge_failure,
+)
+from src.agents.differential_request import (
+    DEFAULT_CAUSE_MAX_TOKENS,
+    DEFAULT_CHALLENGE_MAX_TOKENS,
+    CauseEnvelope,
+    ChallengeProposal,
+    CheckPrompt,
+    ValidatedCause,
+    ValidatedChallenge,
+    build_cause_request,
+    build_challenge_request,
+    validate_causes,
+    validate_challenge,
+)
 from src.agents.model_transport import (
     FailureCategory,
     ModelIntegrationError,
@@ -26,7 +50,7 @@ from src.agents.validation_diagnostics import (
     sanitized_finish_reason,
     sanitized_validation_details,
 )
-from src.config_types import CandidateConfig
+from src.config_types import CandidateConfig, ScenarioConfig
 from src.core.constraints import ConstraintRule
 from src.core.evidence import EvidenceStore, PayloadTooLarge
 from src.core.pipeline import Candidate, CandidateAssessment, assess_candidate
@@ -35,14 +59,21 @@ from src.core.types import (
     AnalysisOutcome,
     Confidence,
     Evidence,
+    EvidenceKind,
     SuggestedAction,
     Verdict,
 )
 from src.model_config import ModelRoute, load_api_key, load_model_route
+from src.policy import COVERAGE_UNEXPLAINED_LARGE_Z
 from src.schemas.models import (
+    ChallengeModel,
+    ChallengeStatus,
+    CoverageModel,
+    DifferentialEntryModel,
     HypothesisModel,
     ModelNarrative,
     RCAOutputModel,
+    RootCauseCategory,
 )
 
 _LOGGER = logging.getLogger(__name__)
@@ -60,6 +91,41 @@ def _fail_closed() -> RCAOutputModel:
             "Model unavailable or response invalid; review deterministic evidence."
         ],
     )
+
+
+def _gated_root_cause(
+    status: Verdict, root_cause: RootCauseCategory
+) -> RootCauseCategory:
+    """A contradiction is an instrumentation finding, not the configured cause."""
+    return (
+        RootCauseCategory.INSTRUMENTATION_FAULT
+        if status is Verdict.VETOED
+        else root_cause
+    )
+
+
+def _gated_action(
+    outcome: AnalysisOutcome,
+    supported_action: SuggestedAction,
+    evidence: tuple[Evidence, ...],
+    *,
+    incomplete: bool = False,
+) -> SuggestedAction:
+    """Pick the Python-owned action; a lone anomaly is never "all normal"."""
+    if outcome is AnalysisOutcome.ANALYSIS_SUPPORTED:
+        return supported_action
+    if outcome is AnalysisOutcome.ANALYSIS_INCONCLUSIVE:
+        if incomplete:
+            return SuggestedAction.COLLECT_MORE_DATA
+        if any(item.kind is EvidenceKind.SENSOR_ANOMALY for item in evidence):
+            # Something moved, every declared channel was evaluated, and no
+            # configured check explained it. A human should look before more data
+            # is collected or the anomaly is ignored.
+            return SuggestedAction.ESCALATE_TO_ENGINEER
+        # Every checked channel was evaluated and stayed within its limit. There
+        # is no fault to inspect and nothing missing; keep watching.
+        return SuggestedAction.CONTINUE_MONITORING
+    return default_action_for(outcome)
 
 
 def _candidate_citations(
@@ -127,6 +193,8 @@ def _gated_next_checks(
     narrative: ModelNarrative | None,
     predicate_config: PredicateConfig,
     failure_note: str | None,
+    *,
+    challenge_failed: bool = False,
 ) -> list[str]:
     checks: list[str] = []
     if missing_signals:
@@ -147,9 +215,32 @@ def _gated_next_checks(
         vetoed = ", ".join(item.value for item in assessment.constraints.vetoed)
         checks.append(f"Resolve the contradiction before acting: {vetoed}.")
     elif status is Verdict.INSUFFICIENT:
+        if challenge_failed:
+            checks.append(
+                "The AI challenge check did not support this saved check; review "
+                "it before acting."
+            )
+        elif assessment.constraints.verdict is Verdict.SUPPORTED:
+            checks.append(
+                "The configured check passed, but large anomalies outside it "
+                "prevent a bare confirmation."
+            )
+        else:
+            checks.append(
+                "The configured candidate did not meet every required predicate; "
+                "collect or verify the missing channels."
+            )
+    if assessment.coverage.unexplained_large:
         checks.append(
-            "The configured candidate did not meet every required predicate; "
-            "collect or verify the missing channels."
+            "Large anomalies outside the configured check: "
+            + ", ".join(assessment.coverage.unexplained_large)
+            + ". Review them before accepting the result."
+        )
+    elif assessment.coverage.unexplained:
+        checks.append(
+            "Other declared channels moved outside the configured check: "
+            + ", ".join(assessment.coverage.unexplained)
+            + ". Review the pattern."
         )
     if narrative is None:
         checks.append(
@@ -288,11 +379,19 @@ class RCAEngine:
             self._predicate_config,
             self._rules,
             supported_action,
+            large_z=COVERAGE_UNEXPLAINED_LARGE_Z,
         )
         status = assessment.constraints.verdict
         if missing_signals and status is not Verdict.VETOED:
             # A configured channel with no evidence means the candidate is not
             # fully assessed, even if the remaining citations look sufficient.
+            status = Verdict.INSUFFICIENT
+        if (
+            status is Verdict.SUPPORTED
+            and assessment.coverage.unexplained_large
+        ):
+            # A large anomaly outside the check means the confirmation is not
+            # broad enough. Python demotes it; the model cannot argue it back.
             status = Verdict.INSUFFICIENT
         if status is Verdict.VETOED:
             outcome = AnalysisOutcome.ANALYSIS_CONTRADICTED
@@ -300,14 +399,15 @@ class RCAEngine:
             outcome = AnalysisOutcome.ANALYSIS_SUPPORTED
         else:
             outcome = AnalysisOutcome.ANALYSIS_INCONCLUSIVE
-        action = (
-            supported_action
-            if outcome is AnalysisOutcome.ANALYSIS_SUPPORTED
-            else default_action_for(outcome)
+        action = _gated_action(
+            outcome,
+            supported_action,
+            evidence,
+            incomplete=bool(missing_signals or assessment.unresolved_evidence),
         )
         hypothesis = HypothesisModel(
             claim=candidate.claim,
-            root_cause=candidate.root_cause,
+            root_cause=_gated_root_cause(status, candidate.root_cause),
             failure_mode=candidate.failure_mode,
             mechanism=candidate.mechanism,
             hypothesis_class=candidate.hypothesis_class,
@@ -343,6 +443,390 @@ class RCAEngine:
                 self._predicate_config,
                 failure_note,
             ),
+            coverage=CoverageModel(
+                explained=list(assessment.coverage.explained),
+                unexplained=list(assessment.coverage.unexplained),
+                unexplained_large=list(assessment.coverage.unexplained_large),
+            ),
+        )
+
+    def _reset_diagnostics(self) -> None:
+        self._last_failure_category = None
+        self._last_finish_reason = None
+        self._last_validation_details = None
+        self._last_outcome = None
+
+    def _complete(self, body: bytes) -> tuple[str | None, FailureCategory | None]:
+        """Run one bounded completion and record only a sanitized failure."""
+        try:
+            completion = self._transport.complete(self._route, self._api_key, body)
+        except ModelIntegrationError as exc:
+            self._record_failure(exc.category)
+            return None, exc.category
+        if completion.finish_reason != "stop":
+            category = FailureCategory.FINISH_REASON
+            self._record_failure(
+                category,
+                finish_reason=sanitized_finish_reason(completion.finish_reason),
+            )
+            return None, category
+        if len(completion.content.encode("utf-8")) > MAX_RESPONSE_BYTES:
+            self._record_failure(FailureCategory.SIZE)
+            return None, FailureCategory.SIZE
+        return completion.content, None
+
+    def _parse_causes(self, content: str) -> CauseEnvelope | None:
+        try:
+            return CauseEnvelope.model_validate_json(content, strict=True)
+        except ValidationError as exc:
+            self._record_failure(
+                FailureCategory.SCHEMA_VALIDATION,
+                sanitized_validation_details(exc),
+            )
+            return None
+        except ValueError:
+            self._record_failure(
+                FailureCategory.SCHEMA_VALIDATION,
+                (ValidationDetail.INVALID_VALUE,),
+            )
+            return None
+
+    def _parse_challenge(self, content: str) -> ChallengeProposal | None:
+        try:
+            return ChallengeProposal.model_validate_json(content, strict=True)
+        except ValidationError as exc:
+            self._record_failure(
+                FailureCategory.SCHEMA_VALIDATION,
+                sanitized_validation_details(exc),
+            )
+            return None
+        except ValueError:
+            self._record_failure(
+                FailureCategory.SCHEMA_VALIDATION,
+                (ValidationDetail.INVALID_VALUE,),
+            )
+            return None
+
+    @staticmethod
+    def _challenge_unavailable(note: str) -> ChallengeModel:
+        return ChallengeModel(status=ChallengeStatus.UNAVAILABLE, note=note)
+
+    def _run_challenge(
+        self,
+        evidence: tuple[Evidence, ...],
+        store: EvidenceStore,
+        outcome: CheckOutcome,
+        max_tokens: int,
+    ) -> ChallengeModel:
+        candidate = outcome.scenario.candidate
+        check = CheckPrompt(
+            check_id=outcome.check_id,
+            label=candidate.claim,
+            primary=tuple(sorted(outcome.scenario.predicate_config.primary_signals)),
+            stay_normal=tuple(
+                sorted(
+                    outcome.scenario.predicate_config.forbidden_anomaly_signals
+                )
+            ),
+        )
+        challenge_tokens = max(1, min(max_tokens, DEFAULT_CHALLENGE_MAX_TOKENS))
+        try:
+            body = build_challenge_request(
+                self._route.model,
+                evidence,
+                check,
+                max_tokens=challenge_tokens,
+            )
+        except PayloadTooLarge:
+            return self._challenge_unavailable(
+                "The AI challenge request exceeded its budget; the deterministic "
+                "result is unchanged."
+            )
+        content, _ = self._complete(body)
+        if content is None:
+            return self._challenge_unavailable(
+                "The AI challenge call failed; the deterministic result is unchanged."
+            )
+        proposal = self._parse_challenge(content)
+        if proposal is None:
+            return self._challenge_unavailable(
+                "The AI challenge response could not be validated; it was discarded."
+            )
+        validated: ValidatedChallenge | None = validate_challenge(
+            proposal,
+            evidence,
+            store,
+            primary_signals=outcome.scenario.predicate_config.primary_signals,
+        )
+        if validated is None:
+            return self._challenge_unavailable(
+                "The AI challenge cited unresolved evidence or an unrecognised "
+                "expectation; it was discarded."
+            )
+        return ChallengeModel(
+            status=(
+                ChallengeStatus.CHECKED
+                if validated.expectation_met
+                else ChallengeStatus.DISCONFIRMED
+            ),
+            text=validated.text,
+            expected=validated.expected,
+            cited_evidence=list(validated.cited_evidence),
+            target_signal=validated.target_signal,
+            expectation_met=validated.expectation_met,
+            downgraded=not validated.expectation_met,
+        )
+
+    def _cause_prompts(
+        self, scenarios: Mapping[str, ScenarioConfig]
+    ) -> tuple[CheckPrompt, ...]:
+        return tuple(
+            CheckPrompt(
+                check_id=check_id,
+                label=scenario.candidate.claim,
+                primary=tuple(sorted(scenario.predicate_config.primary_signals)),
+                stay_normal=tuple(
+                    sorted(
+                        scenario.predicate_config.forbidden_anomaly_signals
+                    )
+                ),
+            )
+            for check_id, scenario in scenarios.items()
+        )
+
+    @staticmethod
+    def _narrative_for_cause(
+        cause: ValidatedCause, scenario: ScenarioConfig
+    ) -> ModelNarrative:
+        candidate = scenario.candidate
+        return ModelNarrative(
+            claim=cause.title,
+            root_cause=candidate.root_cause,
+            failure_mode=candidate.failure_mode,
+            mechanism=cause.why,
+            hypothesis_class=candidate.hypothesis_class,
+            cited_evidence=list(cause.cited_evidence),
+        )
+
+    @staticmethod
+    def _empty_analysis() -> RCAOutputModel:
+        action = default_action_for(AnalysisOutcome.NO_PROPOSALS)
+        return RCAOutputModel(
+            outcome=AnalysisOutcome.NO_PROPOSALS,
+            analysis_performed=False,
+            model_called=False,
+            suggested_next_action=action,
+            explanation=action_explanation(action),
+            confidence=Confidence.INSUFFICIENT,
+            required_next_checks=[
+                "No scoped evidence was available to analyze; review the scope."
+            ],
+        )
+
+    def assess_checks(
+        self,
+        evidence: tuple[Evidence, ...],
+        scenarios: Mapping[str, ScenarioConfig],
+        *,
+        context: str | None = None,
+        max_tokens: int = DEFAULT_CAUSE_MAX_TOKENS,
+        preferred_check: str | None = None,
+    ) -> RCAOutputModel:
+        """Score every saved check, then apply one bounded challenge if confirmed.
+
+        The model may propose a saved check or a new cause. A new cause is never
+        actionable; it is rendered as an unverified differential row. A model
+        failure leaves the Python assessment intact.
+        """
+        self._reset_diagnostics()
+        if not evidence:
+            self._last_outcome = AnalysisOutcome.NO_PROPOSALS
+            return self._empty_analysis()
+
+        store = EvidenceStore(evidence)
+        failure_note: str | None = None
+        discarded = 0
+        causes: tuple[ValidatedCause, ...] = ()
+        try:
+            body = build_cause_request(
+                self._route.model,
+                evidence,
+                self._cause_prompts(scenarios),
+                max_tokens=max_tokens,
+                context=context,
+            )
+        except PayloadTooLarge:
+            self._last_failure_category = FailureCategory.SIZE
+            self._last_outcome = AnalysisOutcome.EVIDENCE_TOO_LARGE
+            _LOGGER.warning("Model request rejected; category=%s", FailureCategory.SIZE)
+            raise
+        content, category = self._complete(body)
+        if content is None:
+            failure_note = category.value if category is not None else "model_failure"
+        else:
+            envelope = self._parse_causes(content)
+            if envelope is None:
+                failure_note = FailureCategory.SCHEMA_VALIDATION.value
+            else:
+                causes, discarded = validate_causes(
+                    envelope, frozenset(scenarios), store
+                )
+
+        narratives: dict[str, ModelNarrative] = {}
+        unconfigured: list[ValidatedCause] = []
+        for cause in causes:
+            if cause.is_new:
+                unconfigured.append(cause)
+            else:
+                scenario = scenarios.get(cause.check)
+                if scenario is not None:
+                    narratives[cause.check] = self._narrative_for_cause(cause, scenario)
+
+        scope = configured_scope(scenarios)
+        outcomes = tuple(
+            assess_check(
+                check_id,
+                scenario,
+                evidence,
+                store,
+                narratives.get(check_id),
+                coverage_scope=scope,
+            )
+            for check_id, scenario in scenarios.items()
+        )
+        headline = choose_headline(outcomes, preferred_check)
+        challenge: ChallengeModel | None = None
+        challenged_label: str | None = None
+        if headline is not None and headline.status is Verdict.SUPPORTED:
+            challenged_label = headline.scenario.candidate.claim
+            challenge = self._run_challenge(evidence, store, headline, max_tokens)
+            if challenge.downgraded:
+                failed_id = headline.check_id
+                outcomes = tuple(
+                    with_challenge_failure(item)
+                    if item.check_id == failed_id
+                    else item
+                    for item in outcomes
+                )
+                headline = choose_headline(outcomes, preferred_check)
+
+        supported = tuple(item for item in outcomes if item.status is Verdict.SUPPORTED)
+        alternative_count = max(0, len(supported) - 1)
+        if headline is None:
+            outcome = (
+                AnalysisOutcome.ANALYSIS_INCONCLUSIVE
+                if unconfigured
+                else AnalysisOutcome.NO_PROPOSALS
+            )
+            action = (
+                SuggestedAction.ESCALATE_TO_ENGINEER
+                if unconfigured
+                else default_action_for(outcome)
+            )
+        elif headline.status is Verdict.SUPPORTED:
+            outcome = AnalysisOutcome.ANALYSIS_SUPPORTED
+            action = action_for(headline)
+        elif headline.status is Verdict.VETOED:
+            outcome = AnalysisOutcome.ANALYSIS_CONTRADICTED
+            action = action_for(headline)
+        else:
+            outcome = AnalysisOutcome.ANALYSIS_INCONCLUSIVE
+            action = action_for(headline)
+            if unconfigured and action is SuggestedAction.CONTINUE_MONITORING:
+                action = SuggestedAction.ESCALATE_TO_ENGINEER
+
+        ordered = (
+            tuple([headline] + [item for item in outcomes if item is not headline])
+            if headline is not None
+            else outcomes
+        )
+        hypotheses = [build_hypothesis(item) for item in ordered]
+        differential: list[DifferentialEntryModel] = [
+            build_differential_entry(item) for item in ordered
+        ]
+        differential.extend(build_unconfigured_entry(item) for item in unconfigured)
+
+        checks: list[str] = []
+        if headline is not None:
+            checks = _gated_next_checks(
+                headline.scenario.candidate,
+                evidence,
+                headline.missing_signals,
+                headline.assessment,
+                headline.status,
+                headline.narrative,
+                headline.scenario.predicate_config,
+                failure_note,
+                challenge_failed=headline.challenge_failed,
+            )
+        elif failure_note:
+            checks.append(
+                "No saved check exists and the AI explanation was unavailable; "
+                "review the draft mapping."
+            )
+        else:
+            checks.append(
+                "No saved check exists for this export; review the draft mapping "
+                "before acting on any proposed cause."
+            )
+        if discarded:
+            checks.append(
+                "The AI proposed one or more causes with unresolved evidence or an "
+                "unknown check; those proposals were discarded."
+            )
+        if unconfigured:
+            titles = ", ".join(item.title for item in unconfigured)
+            checks.append(
+                "The AI proposed a cause with no saved check: "
+                f"{titles}. It stays Needs Review; add and test a saved check to "
+                "act on this proposal."
+            )
+        if (
+            challenge is not None
+            and challenge.downgraded
+            and challenged_label is not None
+            and (headline is None or not headline.challenge_failed)
+        ):
+            checks.append(
+                f"The AI challenge check did not support {challenged_label}; "
+                "the differential marks it for review."
+            )
+        if len(supported) > 1:
+            checks.append(
+                "More than one saved check was confirmed; review the differential "
+                "before acting."
+            )
+
+        coverage = (
+            CoverageModel(
+                explained=list(headline.assessment.coverage.explained),
+                unexplained=list(headline.assessment.coverage.unexplained),
+                unexplained_large=list(
+                    headline.assessment.coverage.unexplained_large
+                ),
+            )
+            if headline is not None
+            else None
+        )
+        self._last_outcome = outcome
+        return RCAOutputModel(
+            outcome=outcome,
+            analysis_performed=True,
+            model_called=True,
+            suggested_next_action=action,
+            explanation=action_explanation(action),
+            confidence=(
+                Confidence.LOW
+                if headline is not None and headline.status is Verdict.SUPPORTED
+                else Confidence.INSUFFICIENT
+            ),
+            hypotheses=hypotheses,
+            required_next_checks=checks,
+            coverage=coverage,
+            differential=differential,
+            headline_check=None if headline is None else headline.check_id,
+            alternative_count=alternative_count,
+            challenge=challenge,
         )
 
     def generate_hypotheses(
@@ -354,10 +838,7 @@ class RCAEngine:
         supported_action: SuggestedAction = SuggestedAction.ESCALATE_TO_ENGINEER,
         candidate: CandidateConfig | None = None,
     ) -> RCAOutputModel:
-        self._last_failure_category = None
-        self._last_finish_reason = None
-        self._last_validation_details = None
-        self._last_outcome = None
+        self._reset_diagnostics()
         if not evidence:
             # Internal guard: a scenario always declares at least one channel.
             # No model call is attempted, so this is not a model rejection.
@@ -412,9 +893,7 @@ class RCAEngine:
         except PayloadTooLarge:
             self._last_failure_category = FailureCategory.SIZE
             self._last_outcome = AnalysisOutcome.EVIDENCE_TOO_LARGE
-            _LOGGER.warning(
-                "Model request rejected; category=%s", FailureCategory.SIZE
-            )
+            _LOGGER.warning("Model request rejected; category=%s", FailureCategory.SIZE)
             raise
         try:
             completion = self._transport.complete(self._route, self._api_key, body)
@@ -444,9 +923,7 @@ class RCAEngine:
 
         store = EvidenceStore(evidence)
         if candidate is not None:
-            narrative = _select_model_narrative(
-                proposals.hypotheses, candidate, store
-            )
+            narrative = _select_model_narrative(proposals.hypotheses, candidate, store)
             return self._gate_candidate(
                 evidence,
                 candidate,
@@ -455,6 +932,7 @@ class RCAEngine:
             )
 
         hypotheses: list[HypothesisModel] = []
+        any_unresolved = False
         for proposal in proposals.hypotheses:
             proposal_candidate = Candidate(
                 claim=proposal.claim,
@@ -467,16 +945,22 @@ class RCAEngine:
                 self._predicate_config,
                 self._rules,
                 supported_action,
+                large_z=COVERAGE_UNEXPLAINED_LARGE_Z,
             )
+            if assessment.unresolved_evidence:
+                any_unresolved = True
+            status = assessment.constraints.verdict
+            if status is Verdict.SUPPORTED and assessment.coverage.unexplained_large:
+                status = Verdict.INSUFFICIENT
             hypotheses.append(
                 HypothesisModel(
                     claim=proposal.claim,
-                    root_cause=proposal.root_cause,
+                    root_cause=_gated_root_cause(status, proposal.root_cause),
                     failure_mode=proposal.failure_mode,
                     mechanism=proposal.mechanism,
                     hypothesis_class=proposal.hypothesis_class,
                     cited_evidence=proposal.cited_evidence,
-                    status=assessment.constraints.verdict,
+                    status=status,
                     veto_reason=(
                         ", ".join(item.value for item in assessment.constraints.vetoed)
                         if assessment.constraints.vetoed
@@ -495,10 +979,8 @@ class RCAEngine:
         else:
             outcome = AnalysisOutcome.ANALYSIS_INCONCLUSIVE
         self._last_outcome = outcome
-        action = (
-            supported_action
-            if outcome is AnalysisOutcome.ANALYSIS_SUPPORTED
-            else default_action_for(outcome)
+        action = _gated_action(
+            outcome, supported_action, evidence, incomplete=any_unresolved
         )
         confidence = (
             Confidence.LOW

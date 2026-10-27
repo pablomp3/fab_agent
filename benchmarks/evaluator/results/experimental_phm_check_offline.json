@@ -1,21 +1,15 @@
 {
   "analysis_performed": true,
-  "anomaly_count": 0,
+  "anomaly_count": 7,
   "any_supported": false,
   "candidate_count": 8,
   "case_id": "experimental_low_integration",
   "detail": null,
   "draft_config_valid": true,
-  "draft_yaml": "version: 1\nname: experimental_draft\nprovenance: Experimental unverified mapping draft; an inference from column names\n  and summary statistics, not a validated schema or field calibration.\nsignals: &id001\n- name: time\n  unit: null\n  robust_z_threshold: 3.5\n  threshold_source: experimental_default_robust_mad_multiplier=3.5\n- name: IONGAUGEPRESSURE\n  unit: null\n  robust_z_threshold: 3.5\n  threshold_source: experimental_default_robust_mad_multiplier=3.5\n- name: ETCHBEAMVOLTAGE\n  unit: null\n  robust_z_threshold: 3.5\n  threshold_source: experimental_default_robust_mad_multiplier=3.5\n- name: ETCHBEAMCURRENT\n  unit: null\n  robust_z_threshold: 3.5\n  threshold_source: experimental_default_robust_mad_multiplier=3.5\n- name: ETCHSUPPRESSORVOLTAGE\n  unit: null\n  robust_z_threshold: 3.5\n  threshold_source: experimental_default_robust_mad_multiplier=3.5\n- name: FLOWCOOLFLOWRATE\n  unit: null\n  robust_z_threshold: 3.5\n  threshold_source: experimental_default_robust_mad_multiplier=3.5\n- name: ETCHGASCHANNEL1READBACK\n  unit: null\n  robust_z_threshold: 3.5\n  threshold_source: experimental_default_robust_mad_multiplier=3.5\n- name: ETCHPBNGASREADBACK\n  unit: null\n  robust_z_threshold: 3.5\n  threshold_source: experimental_default_robust_mad_multiplier=3.5\nscenarios:\n  experimental_scope:\n    signals: *id001\n    predicates:\n      primary_signals:\n      - time\n      corroboration_signals:\n      - ETCHBEAMCURRENT\n      - ETCHBEAMVOLTAGE\n      - ETCHGASCHANNEL1READBACK\n      - ETCHPBNGASREADBACK\n      - ETCHSUPPRESSORVOLTAGE\n      - FLOWCOOLFLOWRATE\n      - IONGAUGEPRESSURE\n    rules:\n      experimental_unverified:\n        require_all:\n        - has_primary_signal_anomaly\n        forbid_any:\n        - has_missing_required_evidence\n    candidate:\n      claim: Experimental unverified mapping draft\n      hypothesis_class: experimental_unverified\n      cited_signals:\n      - time\n      - IONGAUGEPRESSURE\n      - ETCHBEAMVOLTAGE\n      - ETCHBEAMCURRENT\n      - ETCHSUPPRESSORVOLTAGE\n      - FLOWCOOLFLOWRATE\n      - ETCHGASCHANNEL1READBACK\n      - ETCHPBNGASREADBACK\n      root_cause: unknown\n      failure_mode: Not claimed; the mapping is unverified.\n      mechanism: Not claimed; the mapping is unverified.\n    supported_action: ESCALATE_TO_ENGINEER\n",
+  "draft_yaml": "version: 2\ntool:\n  name: experimental_draft\n  label: Experimental Draft\n  description: Experimental unverified mapping draft; an inference from column names\n    and summary statistics, not a validated schema or field calibration.\nbaseline:\n  mode: lead_in\n  rows: 50\n  file: null\n  step_column: null\nsignals:\n- name: time\n  label: time\n  unit: null\n  alert_at: 3.5\n- name: IONGAUGEPRESSURE\n  label: IONGAUGEPRESSURE\n  unit: null\n  alert_at: 3.5\n- name: ETCHBEAMVOLTAGE\n  label: ETCHBEAMVOLTAGE\n  unit: null\n  alert_at: 3.5\n- name: ETCHBEAMCURRENT\n  label: ETCHBEAMCURRENT\n  unit: null\n  alert_at: 3.5\n- name: ETCHSUPPRESSORVOLTAGE\n  label: ETCHSUPPRESSORVOLTAGE\n  unit: null\n  alert_at: 3.5\n- name: ETCHSUPPRESSORCURRENT\n  label: ETCHSUPPRESSORCURRENT\n  unit: null\n  alert_at: 3.5\n- name: FLOWCOOLFLOWRATE\n  label: FLOWCOOLFLOWRATE\n  unit: null\n  alert_at: 3.5\n- name: FLOWCOOLPRESSURE\n  label: FLOWCOOLPRESSURE\n  unit: null\n  alert_at: 3.5\nchecks: []\n",
   "evidence_count": 8,
   "gate": "B-experimental",
-  "hypotheses": [
-    {
-      "hypothesis_class": "experimental_unverified",
-      "root_cause": "unknown",
-      "status": "INSUFFICIENT"
-    }
-  ],
+  "hypotheses": [],
   "input": "benchmarks/datasets/phm2018/sample/M02_DC_01_sample.csv",
   "llm_calls": 0,
   "mapping_signal_count": 8,

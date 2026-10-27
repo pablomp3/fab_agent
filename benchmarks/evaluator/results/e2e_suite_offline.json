@@ -8,21 +8,14 @@
       "expectation_note": "fault-centered sample window; full-file W5 run is SUPPORTED",
       "experimental_path": {
         "analysis_performed": true,
-        "anomaly_count": 0,
+        "anomaly_count": 7,
         "any_supported": false,
         "candidate_count": 8,
         "detail": null,
         "draft_config_valid": true,
         "evidence_count": 8,
         "expected_outcome": "EXPERIMENTAL_UNVERIFIED_MAPPING",
-        "hypotheses": [
-          {
-            "hypothesis_class": "experimental_unverified",
-            "root_cause": "unknown",
-            "status": "INSUFFICIENT",
-            "veto_reason": null
-          }
-        ],
+        "hypotheses": [],
         "mapping_signal_count": 8,
         "matched_expectation": true,
         "model_called": true,
@@ -36,7 +29,7 @@
         "any_supported": false,
         "any_vetoed": false,
         "detail": null,
-        "evidence_count": 2,
+        "evidence_count": 7,
         "expected_outcome": "ANALYSIS_INCONCLUSIVE",
         "hypotheses": [
           {
@@ -50,8 +43,8 @@
         "model_called": true,
         "outcome": "ANALYSIS_INCONCLUSIVE",
         "selected_config": "ion_mill_phm18",
-        "selected_scenario": "flowcool",
-        "suggested_next_action": "COLLECT_MORE_DATA"
+        "selected_scenario": "coolant_loop",
+        "suggested_next_action": "ESCALATE_TO_ENGINEER"
       },
       "source": "real_public_benchmark"
     },
@@ -62,20 +55,13 @@
       "experimental_path": {
         "analysis_performed": true,
         "anomaly_count": 2,
-        "any_supported": true,
+        "any_supported": false,
         "candidate_count": 3,
         "detail": null,
         "draft_config_valid": true,
         "evidence_count": 3,
         "expected_outcome": "EXPERIMENTAL_UNVERIFIED_MAPPING",
-        "hypotheses": [
-          {
-            "hypothesis_class": "experimental_unverified",
-            "root_cause": "unknown",
-            "status": "SUPPORTED",
-            "veto_reason": null
-          }
-        ],
+        "hypotheses": [],
         "mapping_signal_count": 3,
         "matched_expectation": true,
         "model_called": true,
@@ -93,7 +79,7 @@
         "expected_outcome": "ANALYSIS_SUPPORTED",
         "hypotheses": [
           {
-            "hypothesis_class": "feed_disturbance",
+            "hypothesis_class": "upstream_process",
             "root_cause": "upstream_process",
             "status": "SUPPORTED",
             "veto_reason": null
@@ -103,7 +89,7 @@
         "model_called": true,
         "outcome": "ANALYSIS_SUPPORTED",
         "selected_config": "tep_reactor",
-        "selected_scenario": "feed_loss",
+        "selected_scenario": "feed_disturbance",
         "suggested_next_action": "ESCALATE_TO_ENGINEER"
       },
       "source": "real_public_benchmark"
@@ -121,14 +107,7 @@
         "draft_config_valid": true,
         "evidence_count": 3,
         "expected_outcome": "EXPERIMENTAL_UNVERIFIED_MAPPING",
-        "hypotheses": [
-          {
-            "hypothesis_class": "experimental_unverified",
-            "root_cause": "unknown",
-            "status": "INSUFFICIENT",
-            "veto_reason": null
-          }
-        ],
+        "hypotheses": [],
         "mapping_signal_count": 3,
         "matched_expectation": true,
         "model_called": true,
@@ -146,7 +125,7 @@
         "expected_outcome": "ANALYSIS_INCONCLUSIVE",
         "hypotheses": [
           {
-            "hypothesis_class": "feed_disturbance",
+            "hypothesis_class": "upstream_process",
             "root_cause": "upstream_process",
             "status": "INSUFFICIENT",
             "veto_reason": null
@@ -156,8 +135,8 @@
         "model_called": true,
         "outcome": "ANALYSIS_INCONCLUSIVE",
         "selected_config": "tep_reactor",
-        "selected_scenario": "feed_loss",
-        "suggested_next_action": "COLLECT_MORE_DATA"
+        "selected_scenario": "feed_disturbance",
+        "suggested_next_action": "ESCALATE_TO_ENGINEER"
       },
       "source": "real_public_benchmark"
     },
@@ -168,20 +147,13 @@
       "experimental_path": {
         "analysis_performed": true,
         "anomaly_count": 1,
-        "any_supported": true,
+        "any_supported": false,
         "candidate_count": 4,
         "detail": null,
         "draft_config_valid": true,
         "evidence_count": 4,
         "expected_outcome": "EXPERIMENTAL_UNVERIFIED_MAPPING",
-        "hypotheses": [
-          {
-            "hypothesis_class": "experimental_unverified",
-            "root_cause": "unknown",
-            "status": "SUPPORTED",
-            "veto_reason": null
-          }
-        ],
+        "hypotheses": [],
         "mapping_signal_count": 4,
         "matched_expectation": true,
         "model_called": true,
@@ -200,7 +172,7 @@
         "hypotheses": [
           {
             "hypothesis_class": "equipment_fault",
-            "root_cause": "equipment_fault",
+            "root_cause": "instrumentation_fault",
             "status": "VETOED",
             "veto_reason": "has_instrumentation_contradiction"
           }
@@ -208,8 +180,8 @@
         "matched_expectation": true,
         "model_called": true,
         "outcome": "ANALYSIS_CONTRADICTED",
-        "selected_config": "synthetic_twin_v1",
-        "selected_scenario": "B4a",
+        "selected_config": "synthetic_rf",
+        "selected_scenario": "rf_arc",
         "suggested_next_action": "REVIEW_CONTRADICTION"
       },
       "source": "synthetic_twin"

@@ -30,6 +30,18 @@ class ActionGuidanceTests(unittest.TestCase):
                 (action_label(action), action_explanation(action)),
             )
 
+    def test_action_phrases_match_the_user_vocabulary(self) -> None:
+        expected = {
+            SuggestedAction.INSPECT_COMPONENT: "Inspect the part",
+            SuggestedAction.CONTINUE_MONITORING: "Keep monitoring",
+            SuggestedAction.ESCALATE_TO_ENGINEER: "Ask an engineer to review",
+            SuggestedAction.COLLECT_MORE_DATA: "Get the missing data",
+            SuggestedAction.REVIEW_CONTRADICTION: "Check the sensor first",
+            SuggestedAction.REVIEW_DRAFT_MAPPING: "Review the guessed columns",
+        }
+        for action, phrase in expected.items():
+            self.assertEqual(action_label(action), phrase)
+
     def test_unsafe_recipe_action_is_not_representable(self) -> None:
         self.assertNotIn("UPDATE_RECIPE", {item.value for item in SuggestedAction})
 

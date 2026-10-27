@@ -1,8 +1,12 @@
 from __future__ import annotations
 
+import shutil
 import tempfile
 import unittest
 from pathlib import Path
+from typing import cast
+
+import yaml
 
 from benchmarks.evaluator.echo_transport import (
     ExperimentalEchoTransport,
@@ -42,7 +46,20 @@ def _run(
             )
         config_dir = Path(temp_dir) / "config"
         config_dir.mkdir()
-        (config_dir / "tool.yaml").write_bytes(Path(config_path).read_bytes())
+        config_source = Path(config_path)
+        (config_dir / "tool.yaml").write_bytes(config_source.read_bytes())
+        raw = cast(object, yaml.safe_load(config_source.read_text(encoding="utf-8")))
+        if isinstance(raw, dict):
+            data = cast(dict[str, object], raw)
+            baseline = data.get("baseline")
+            if isinstance(baseline, dict):
+                baseline_data = cast(dict[str, object], baseline)
+                baseline_file = baseline_data.get("file")
+                if isinstance(baseline_file, str):
+                    shutil.copy(
+                        config_source.parent / baseline_file,
+                        config_dir / baseline_file,
+                    )
         return analyze_csv(
             path,
             "generated demo",
@@ -74,9 +91,7 @@ class DemoDataTests(unittest.TestCase):
         self.assertEqual(result.outcome.value, "ANALYSIS_SUPPORTED")
 
     def test_contradiction_generator_is_vetoed(self) -> None:
-        generated = generate_demo_csv(
-            "synthetic_rf", seed=3, behavior="contradiction"
-        )
+        generated = generate_demo_csv("synthetic_rf", seed=3, behavior="contradiction")
         result = _run(
             generated.csv_bytes,
             str(generated.template.config_path),

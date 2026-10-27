@@ -1,24 +1,24 @@
 # PHM 2018 Ion Mill representative sample slices
 
-These small CSV slices are committed to the repository so the shape and
-behavior of the real PHM 2018 ion-mill data are visible without checking in the
-585 MB score file.
+These small CSV slices are committed so the shape and behavior of the real PHM
+2018 ion-mill data are visible without checking in the 585 MB score file. Each
+file keeps only `time` and the seven configured signals.
 
 | File | Rows | What it shows |
 |---|---|---|
-| `M02_DC_01_sample.csv` | 1,000 (header + 1,000) | A window centered on the first zero-TTF fault event in run `01_M02_DC_01` (`Flowcool leak`, time = 56612312). The in-file robust baseline absorbs the excursion, so this fault-centered slice is **inconclusive**; it remains the benchmark window used by the E2E suite. |
-| `M02_DC_01_demo_sample.csv` | 970 (header + 970) | A prepared demo slice with a stable lead-in followed by the same documented fault window. The flowcool channels are visibly deviated from the lead-in, so the product scenario reports `SUPPORTED`. |
-| `M02_DC_01_nominal_sample.csv` | 1,000 (header + 1,000) | A nominal window from the same public score file. The configured flowcool channels are present and below the 3.5 robust-z threshold, so the safe path abstains. |
+| `M02_DC_01_sample.csv` | 1,000 (100 normal lead-in + 900 fault-window rows) | The fault-centred benchmark slice. The v2 tool model uses the separate nominal file as its normal reference, so the fault is visible and the result agrees with the demo slice. |
+| `M02_DC_01_demo_sample.csv` | 1,000 (900 nominal rows + 100 fault-window rows) | The product demo slice. It starts with the clean nominal window and ends in the same fault window. |
+| `M02_DC_01_nominal_sample.csv` | 900 | The clean normal control. It is the `nominal_file` baseline for `ion_mill_phm18.yaml`; against itself every configured channel is nominal. |
 
-The demo slice is deliberately prepared with a nominal lead-in. A window
-centered only on the fault can make the in-file robust baseline absorb the
-excursion. The committed slices are demonstration inputs, not new benchmark
-truth.
+All three slices come from the same run and preserve `time`. The nominal file
+was selected as a 900-row window whose own robust-z maximum stays below the
+3.5 alert level for every configured channel. The fault slices were selected
+from the same operating point immediately after that window.
 
-The dataset documentation states that sensor values are Z-normalized and that
-units are withheld, so all units remain `None` in the configuration.
+## Result
 
-The full score file (`01_M02_DC_score.csv`) and the converted processed files
-live in `benchmarks/datasets/phm2018/raw/` and
-`benchmarks/datasets/phm2018/processed/` and are excluded from Git via
-`.gitignore`.
+The coolant check passes on the fault slices, but large anomalies in the other
+declared channels remain unexplained. Under the v2 coverage rule the product
+reports **Needs Review**, not **Fault Confirmed**. That is deliberate: a
+confirmation is only shown when the configured check explains the large moves.
+The nominal control reports **Regular Behavior**.

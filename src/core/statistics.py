@@ -69,4 +69,5 @@ def classify_signal(
         computed_by="robust_mad_zscore@v1",
         summary=summary,
         window_basis=provenance if window is not None else None,
+        threshold=robust_z_threshold,
     )

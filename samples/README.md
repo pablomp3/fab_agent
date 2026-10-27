@@ -1,28 +1,27 @@
 # Demo samples
 
-The dashboard also ships prepared public-dataset slices in
-`benchmarks/datasets/phm2018/sample/` and `benchmarks/datasets/tep/sample/`.
-These four small CSVs are **synthetic demo inputs**, not field telemetry. They
-exercise the product paths without a provider key when the dashboard's offline
-transport is selected.
+The dashboard ships four small CSVs and can generate a fresh seeded export.
+They are **demo inputs**, not field telemetry. They exercise the product paths
+without a provider key when the dashboard's offline transport is selected.
 
-| File | What it demonstrates |
-|---|---|
-| `flowcool_supported.csv` | Safe path: a configured flowcool schema, both channels anomalous, Python verdict `SUPPORTED`, action `INSPECT_COMPONENT`. |
-| `flowcool_inconclusive.csv` | Safe path: the configured channels are present but neither is anomalous, so the gate abstains and asks for more data. |
-| `rf_contradiction.csv` | Safe path: `sensor_17` is anomalous while every configured corroborating channel is nominal. The contradiction veto wins, so the model's arc story cannot support an action. |
-| `unknown_tool.csv` | Experimental fallback: no configured schema matches, the mapping is inferred, evidence is marked unverified, and the UI offers a draft config to review and save. |
+| File | What it demonstrates | Expected result |
+|---|---|---|
+| `flowcool_supported.csv` | A saved coolant tool model; both coolant channels move | **Fault Confirmed** → Inspect the part |
+| `flowcool_inconclusive.csv` | The coolant channels are present but neither moves | **Regular Behavior** or **Needs Review** (see the coverage note) |
+| `rf_contradiction.csv` | `sensor_17` moves while every companion stays normal | **Sensors Disagree** → Check the sensor first |
+| `unknown_tool.csv` | No saved tool model matches; the mapper drafts one | **Unknown Machine** → Review the guessed columns |
 
 The safe-path samples use the headers of the public PHM 2018 / synthetic-twin
-configurations so the deterministic triage can select a scenario. The values
-are hand-written; they are not copied from a fab or from a public dataset.
+configurations so triage can select a tool model. The values are hand-written;
+they are not copied from a fab or a public dataset.
 
-The dashboard can also generate a fresh seeded export from the same
-baseline-plus-drift idea. The generator writes a nominal lead-in and an optional
-drift, but it never writes a ground-truth label; the Python gate still decides.
+> **PHM slices:** the committed PHM `M02_DC_01_nominal_sample.csv` is a clean
+> normal control, and the two fault slices use it as their `nominal_file`
+> baseline. The same fault gives the same product result. See
+> [`docs/DATASETS.md`](../docs/DATASETS.md).
 
-Run the dashboard in offline mode or run the same files through the product
-entry point with an offline transport:
+Run the dashboard in offline mode, or run the same files through the product entry
+point:
 
 ```sh
 PYTHONPATH=. .venv/bin/python - <<'PY'
@@ -43,3 +42,6 @@ result = analyze_csv(
 print(result.mode, result.outcome, result.suggested_next_action)
 PY
 ```
+
+The generator writes a nominal lead-in and an optional drift, but it never writes
+a ground-truth label. Python still decides.

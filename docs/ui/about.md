@@ -1,46 +1,75 @@
-# What is FabAgent?
+# A fab copilot that shows its evidence
 
-FabAgent is a troubleshooting copilot for semiconductor process engineers. It
-takes a tool export (CSV), checks the channels named in a tool-specific YAML
-configuration, and returns a **typed next step** for a human to review.
+A semiconductor tool streams hundreds of channels. When an alarm fires, an
+engineer has to decide whether a coolant drop is a real equipment fault, a
+failing sensor, a downstream symptom, or normal recipe behaviour.
 
-It is deliberately **evidence-gated**: the model may explain what it sees, but
-Python decides whether the configured candidate is supported, insufficient, or
-vetoed.
+**FabAgent turns that CSV into one defensible next step.** It builds a normal
+reference, scores every declared signal, checks the engineer's saved fault
+patterns, and returns one of six plain results — with the evidence and the
+contradiction attached.
 
-```mermaid
-flowchart LR
-    A[Tool CSV] --> B[Python triage]
-    B --> C[Tool YAML]
-    C --> D[DuckDB evidence]
-    D --> E[Nemotron narrative]
-    E --> F[Python gate]
-    D --> F
-    F --> G[Typed next action]
-    E -. not gated .-> F
-```
+> **Nemotron proposes. Python checks. The engineer decides.**
 
-## What you do as a fab engineer
+---
 
-1. **Choose a dataset or upload a raw tool CSV.** The first rows are previewed so
-   you can confirm the export before running anything.
-2. **Read the column guide.** It explains what the important channels mean.
-3. **Review the YAML configuration.** The YAML names the channels, thresholds,
-   candidate claim, and the typed action allowed when the candidate is supported.
-4. **Choose live services in the sidebar.** Nemotron is on when the server has a
-   key. Tavily is optional and only runs for inconclusive or experimental results.
-5. **Run the case and watch the checklist.** Each step is marked as it completes:
-   CSV read, triage, DuckDB scan, Python checks, model call, gate, Tavily.
-6. **Read the verdict and next action.** Open the evidence table if you want to
-   audit the numbers. If the result is experimental, review the draft mapping
-   before trusting it.
+## Why it matters
 
-## What FabAgent will not do
+| Persona | What is expensive today | What FabAgent changes |
+| --- | --- | --- |
+| **Junior engineer** | Hundreds of time series, unfamiliar alarm codes, no clear next step | One plain result, one safe action, and the exact signals behind it |
+| **Senior process engineer** | Black-box AI, hidden thresholds, unauditable advice | An editable tool model, visible checks, and a full audit trail |
+| **Fab operations** | False alarms, unnecessary downtime, a recipe change on one noisy channel | Sensor conflicts are caught before a recipe change; missing data fails closed |
 
-- It will not change a process recipe or act on the tool.
-- It will not treat a model narrative as evidence.
-- It will not claim a physical root cause from an unverified mapping.
-- It will not hide a missing channel or an unresolved citation.
+The value is not “another chatbot.” It is **decision hygiene**: the same input
+gives the same answer, every claim is traceable, and the system abstains when
+the data cannot support an action.
 
-> The public samples are demonstration data. They are not field validation and
-> they are not a substitute for a tool engineer's review.
+---
+
+## What makes it different
+
+- **The gate is deterministic.** DuckDB builds the statistics; Python resolves
+  every evidence ID, applies coverage, and chooses the action.
+- **The model is useful, not authoritative.** Nemotron maps unknown columns,
+  proposes causes, challenges the leading cause, and writes the explanation.
+  It never owns the verdict.
+- **Contradictions are absolute.** If a signal moves but the channels that
+  should agree stay flat, the result is **Sensors Disagree**, not a fault.
+- **Nothing large is hidden.** “What else moved” lists every unexplained
+  declared signal; a large one prevents a bare **Fault Confirmed**.
+- **The action is typed.** The action set contains no recipe change and no lot
+  hold. A human confirms the next step.
+
+---
+
+## How a run works
+
+1. **Read the export.** The CSV is matched to a saved tool model, or Auto mode
+   drafts one.
+2. **Build normal.** A lead-in, a saved normal file, or a recipe-step reference
+   defines what “normal” means.
+3. **Create evidence.** Every declared signal becomes an anomaly, nominal, or
+   missing record with an ID.
+4. **Run the checks.** Python scores every saved fault pattern, coverage, and
+   contradiction.
+5. **Ask the model to help.** Nemotron proposes causes and one disconfirming
+   test; Python evaluates the citations and the test.
+6. **Return one result.** One of six words, one safe next step, and an audit
+   trail a reviewer can follow.
+
+---
+
+## What FabAgent will never do
+
+- **Never change a recipe autonomously.** A human confirms every action.
+- **Never treat model prose as evidence.** Every citation is resolved against
+  the data.
+- **Never invent tool physics.** Unknown units, thresholds, and relationships
+  stay `None`.
+- **Never send raw telemetry to the model.** Only a bounded summary leaves the
+  process.
+- **Never call a single sensor spike a confirmed fault when the companions
+  disagree.**
+- **Never hide an unexplained anomaly.** It appears in the result and can push
+  the outcome to **Needs Review**.

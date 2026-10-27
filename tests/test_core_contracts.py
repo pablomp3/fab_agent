@@ -205,9 +205,7 @@ class CoreContractTests(unittest.TestCase):
 
     def test_unsafe_action_cannot_be_represented(self) -> None:
         with self.assertRaises((TypeError, ValueError)):
-            apply_safety_gate(
-                Verdict.SUPPORTED, cast(SuggestedAction, "UPDATE_RECIPE")
-            )
+            apply_safety_gate(Verdict.SUPPORTED, cast(SuggestedAction, "UPDATE_RECIPE"))
 
     def test_core_has_no_benchmark_identifiers(self) -> None:
         core = Path("src/core")

@@ -89,12 +89,29 @@ def _scenario_rank(
     scenario: ScenarioConfig,
     text_tokens: frozenset[str],
     header_set: set[str],
-) -> tuple[float, int, int, tuple[str, ...]]:
-    names = [signal.name for signal in scenario.signals]
-    matched = tuple(name for name in names if _normalized(name) in header_set)
-    coverage = len(matched) / len(names) if names else 0.0
+) -> tuple[float, float, int, int, int, tuple[str, ...]]:
+    primary_names = [signal.name for signal in scenario.signals]
+    primary_matched = tuple(
+        name for name in primary_names if _normalized(name) in header_set
+    )
+    primary_coverage = (
+        len(primary_matched) / len(primary_names) if primary_names else 0.0
+    )
+    declared = scenario.declared_signals or scenario.signals
+    declared_names = [signal.name for signal in declared]
+    matched = tuple(
+        name for name in declared_names if _normalized(name) in header_set
+    )
+    coverage = len(matched) / len(declared_names) if declared_names else 0.0
     keyword_overlap = len(_tokens(scenario.candidate.claim) & text_tokens)
-    return coverage, keyword_overlap, len(matched), matched
+    return (
+        primary_coverage,
+        coverage,
+        len(matched),
+        keyword_overlap,
+        len(primary_matched),
+        primary_matched,
+    )
 
 
 def select_profile(
@@ -111,21 +128,28 @@ def select_profile(
     """
     header_set = {_normalized(item) for item in headers}
     text_tokens = _tokens(engineer_text)
-    best_rank: tuple[float, int, int, str, str] | None = None
+    best_rank: tuple[float, float, int, int, int, str, str] | None = None
     best_selection: ProfileSelection | None = None
     for config_path in sorted(Path(search_dir).glob("*.yaml")):
         relations = load_relations(config_path)
         for scenario_name in sorted(relations.scenarios):
             scenario = relations.scenarios[scenario_name]
-            coverage, keyword_overlap, matched_count, matched = _scenario_rank(
-                scenario, text_tokens, header_set
-            )
+            (
+                primary_coverage,
+                coverage,
+                matched_count,
+                keyword_overlap,
+                primary_matched_count,
+                matched,
+            ) = _scenario_rank(scenario, text_tokens, header_set)
             if matched_count < MIN_MATCHED_SIGNALS or coverage < MIN_SIGNAL_COVERAGE:
                 continue
             rank = (
+                primary_coverage,
                 coverage,
-                keyword_overlap,
                 matched_count,
+                keyword_overlap,
+                primary_matched_count,
                 relations.name,
                 scenario_name,
             )

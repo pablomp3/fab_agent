@@ -1,35 +1,21 @@
-version: 1
-name: tep_reactor
-provenance: "TEP documented cause and symptom variables"
+tool:
+  name: tep_reactor
+  label: TEP reactor
+  description: "TEP documented cause and symptom variables. The configured pattern is a feed-flow and reactor-pressure excursion; it does not assert a physical mechanism."
+baseline:
+  mode: lead_in
+  rows: 6
 signals:
-  - {name: "XMEAS(1)", unit: "kscmh", robust_z_threshold: null, threshold_source: null}
-  - {name: "XMV(3)", unit: "%", robust_z_threshold: null, threshold_source: null}
-  - {name: "XMEAS(7)", unit: "kPa", robust_z_threshold: null, threshold_source: null}
-groups:
-  feed_system: ["XMEAS(1)", "XMV(3)"]
-  reactor_response: ["XMEAS(7)"]
-roles:
-  cause: ["XMEAS(1)", "XMV(3)"]
-  symptom: ["XMEAS(7)"]
-scenarios:
-  feed_loss:
-    signals:
-      - {name: "XMEAS(1)", unit: "kscmh", robust_z_threshold: 3.5, threshold_source: "standard_robust_mad_multiplier=3.5"}
-      - {name: "XMV(3)", unit: "%", robust_z_threshold: 3.5, threshold_source: "standard_robust_mad_multiplier=3.5"}
-      - {name: "XMEAS(7)", unit: "kPa", robust_z_threshold: 3.5, threshold_source: "standard_robust_mad_multiplier=3.5"}
-    predicates:
-      primary_signals: ["XMEAS(1)", "XMV(3)"]
-      corroboration_signals: ["XMEAS(7)"]
-    rules:
-      feed_disturbance:
-        require_all: [has_primary_signal_anomaly]
-        forbid_any: [has_missing_required_evidence]
-        veto_if_any: []
-    candidate:
-      claim: feed-system disturbance
-      hypothesis_class: feed_disturbance
-      cited_signals: ["XMEAS(1)", "XMV(3)", "XMEAS(7)"]
-      root_cause: upstream_process
-      failure_mode: Feed-system disturbance; confirm the specific valve or feed line during review.
-      mechanism: The configured TEP cause channels moved together; the configuration does not assert a specific physical mechanism.
-    supported_action: ESCALATE_TO_ENGINEER
+  - {name: "XMEAS(1)", label: A feed flow, unit: kscmh, alert_at: 3.5}
+  - {name: "XMV(3)", label: A feed valve, unit: "%", alert_at: 3.5}
+  - {name: "XMEAS(7)", label: Reactor pressure, unit: kPa, alert_at: 3.5}
+checks:
+  - id: feed_disturbance
+    label: Feed-system disturbance
+    kind: upstream_process
+    must_be_unusual:
+      - {signal: "XMEAS(1)"}
+      - {signal: "XMEAS(7)"}
+    must_stay_normal: []
+    action: ESCALATE_TO_ENGINEER
+    advice: "Ask an engineer to verify the A feed line and the reactor pressure response. Do not change the recipe."

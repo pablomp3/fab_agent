@@ -137,9 +137,7 @@ class RcaEngineTests(unittest.TestCase):
         request = json.loads(transport.request_body)
         self.assertEqual(request["max_tokens"], 256)
         self.assertEqual(request["response_format"]["type"], "json_schema")
-        self.assertEqual(
-            request["chat_template_kwargs"], {"enable_thinking": False}
-        )
+        self.assertEqual(request["chat_template_kwargs"], {"enable_thinking": False})
         schema_format = request["response_format"]["json_schema"]
         self.assertTrue(schema_format["strict"])
         self.assertEqual(schema_format["name"], "fabagent_proposals")
@@ -273,9 +271,7 @@ class RcaEngineTests(unittest.TestCase):
         self.assertEqual(
             hypothesis.model_narrative.claim, "Possible isolated sensor fault"
         )
-        self.assertEqual(
-            hypothesis.cited_evidence, ["EV_ANOMALY", "EV_PROBE"]
-        )
+        self.assertEqual(hypothesis.cited_evidence, ["EV_ANOMALY", "EV_PROBE"])
 
     def test_missing_configured_channel_forces_inconclusive(self) -> None:
         transport = FakeTransport(proposal_response(["EV_ANOMALY"]))
@@ -363,9 +359,7 @@ class RcaEngineTests(unittest.TestCase):
         self.assertIs(result.outcome, AnalysisOutcome.MODEL_REJECTED)
         self.assertTrue(result.analysis_performed)
         self.assertTrue(result.model_called)
-        self.assertEqual(
-            result.suggested_next_action, SuggestedAction.RETRY_ANALYSIS
-        )
+        self.assertEqual(result.suggested_next_action, SuggestedAction.RETRY_ANALYSIS)
 
     def test_veto_priority_outranks_support(self) -> None:
         response = json.dumps(

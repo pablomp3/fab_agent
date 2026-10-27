@@ -31,9 +31,7 @@ class FakeTavily:
         self.error = error
         self.calls: list[str] = []
 
-    def search(
-        self, query: str, max_results: int = 3
-    ) -> tuple[TavilyReference, ...]:
+    def search(self, query: str, max_results: int = 3) -> tuple[TavilyReference, ...]:
         self.calls.append(query)
         if self.error is not None:
             raise self.error
@@ -99,14 +97,29 @@ class TavilyAttachmentTests(unittest.TestCase):
             "https://example.com/cooling",
         )
         self.assertTrue(search.calls)
-        self.assertIn("flowcool", search.calls[0].lower())
+        self.assertIn("coolant", search.calls[0].lower())
 
     def test_tavily_failure_is_sanitized_and_does_not_change_verdict(self) -> None:
         search = FakeTavily(error=TavilyError("secret upstream detail"))
         result = _run("flowcool_inconclusive.csv", search)
         self.assertEqual(result.external_search_status, "unavailable")
         self.assertEqual(result.output.external_sources, [])
-        self.assertEqual(result.suggested_next_action.value, "COLLECT_MORE_DATA")
+        self.assertEqual(result.suggested_next_action.value, "CONTINUE_MONITORING")
+
+    def test_contradiction_run_searches_for_a_lead(self) -> None:
+        search = FakeTavily(
+            (
+                TavilyReference(
+                    title="Sensor calibration checklist",
+                    url="https://example.com/sensor",
+                    snippet="Check the probe before acting.",
+                ),
+            )
+        )
+        result = _run("rf_contradiction.csv", search)
+        self.assertEqual(result.outcome.value, "ANALYSIS_CONTRADICTED")
+        self.assertEqual(result.external_search_status, "completed")
+        self.assertTrue(search.calls)
 
     def test_no_key_is_reported_without_a_network_call(self) -> None:
         with patch.dict("os.environ", {"TAVILY_API_KEY": ""}):

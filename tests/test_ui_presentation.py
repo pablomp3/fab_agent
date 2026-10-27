@@ -12,6 +12,7 @@ from benchmarks.evaluator.echo_transport import (
 from src.analyze import RunResult, analyze_csv
 from src.config_loader import load_relations
 from src.core.types import AnalysisOutcome, Evidence, EvidenceKind
+from src.demo_catalog import DEMO_CASES
 from src.ui import config_promotion, presentation
 
 _PHM_EXPORT = (
@@ -38,6 +39,17 @@ def _run(text: str, note: str) -> RunResult:
         )
 
 
+def _run_file(path: Path, note: str) -> RunResult:
+    transport = ExperimentalEchoTransport()
+    return analyze_csv(
+        path,
+        note,
+        engine_factory=offline_engine_factory(transport),
+        mapping_factory=offline_mapping_factory(transport),
+        enable_external_search=False,
+    )
+
+
 class OutcomeWordingTests(unittest.TestCase):
     def test_every_outcome_has_human_label_and_tone(self) -> None:
         allowed = {"success", "info", "warning", "error"}
@@ -47,21 +59,134 @@ class OutcomeWordingTests(unittest.TestCase):
             self.assertNotEqual(label, outcome.value)
             self.assertIn(presentation.outcome_tone(outcome), allowed)
 
+    def test_glossary_is_populated_and_valid(self) -> None:
+        self.assertTrue(hasattr(presentation, "GLOSSARY"))
+        self.assertGreaterEqual(len(presentation.GLOSSARY), 10)
+        for term, definition in presentation.GLOSSARY:
+            self.assertTrue(term)
+            self.assertTrue(definition)
+
 
 class SummaryTests(unittest.TestCase):
     def test_safe_run_shows_label_not_raw_action(self) -> None:
         result = _run(_PHM_EXPORT, "flowcool")
         summary = presentation.summarize(result)
-        self.assertEqual(summary.mode_label, "Deterministic safe path")
+        self.assertEqual(summary.mode_label, "Known machine (Safe path)")
         self.assertNotEqual(summary.action_label, result.suggested_next_action.value)
         self.assertTrue(summary.analysis_performed)
 
     def test_experimental_run_is_labelled_unverified(self) -> None:
         result = _run(_UNKNOWN_EXPORT, "unknown tool")
         summary = presentation.summarize(result)
-        self.assertIn("Experimental", summary.mode_label)
-        self.assertEqual(summary.action_label, "Review the draft mapping")
-        self.assertEqual(summary.outcome_label, "Unverified mapping (experimental)")
+        self.assertIn("guessed columns", summary.mode_label)
+        self.assertEqual(summary.action_label, "Review the guessed columns")
+        self.assertEqual(summary.outcome_label, "Unknown Machine")
+
+
+class ResultWordTests(unittest.TestCase):
+    def test_the_six_result_words_are_exact(self) -> None:
+        self.assertEqual(
+            set(presentation.RESULT_WORDS),
+            {
+                "Fault Confirmed",
+                "Regular Behavior",
+                "Sensors Disagree",
+                "Data Incomplete",
+                "Needs Review",
+                "Unknown Machine",
+            },
+        )
+        for word in presentation.RESULT_WORDS:
+            self.assertTrue(presentation.result_badge(word))
+            self.assertIn(
+                presentation.result_tone(word),
+                {"success", "info", "warning", "error"},
+            )
+
+    def test_unexplained_anomaly_is_needs_review_not_regular(self) -> None:
+        case = DEMO_CASES["tep_unmodeled"]
+        result = _run_file(case.csv_path, case.note)
+        self.assertEqual(presentation.result_word(result), "Needs Review")
+        card = presentation.answer_card(result)
+        self.assertEqual(card.confidence_label, "Needs Review")
+        self.assertNotIn("Every checked signal is within", card.headline)
+        self.assertIn("no saved check explains it", card.headline)
+        self.assertEqual(card.action_label, "Ask an engineer to review")
+
+    def test_differential_rows_use_signals_and_result_words(self) -> None:
+        result = _run_file(
+            Path(__file__).resolve().parents[1]
+            / "samples"
+            / "flowcool_supported.csv",
+            "flowcool",
+        )
+        rows = presentation.differential_rows(result.output, result.evidence)
+        self.assertTrue(rows)
+        self.assertEqual(rows[0].possible_cause, "Coolant loop fault")
+        self.assertEqual(rows[0].result, "Fault Confirmed")
+        self.assertIn("FLOWCOOLFLOWRATE", rows[0].evidence_for)
+        self.assertNotIn("EV_", rows[0].evidence_for)
+
+    def test_flat_run_is_regular_behavior(self) -> None:
+        case = DEMO_CASES["synthetic_flowcool_inconclusive"]
+        result = _run_file(case.csv_path, case.note)
+        self.assertEqual(presentation.result_word(result), "Regular Behavior")
+        card = presentation.answer_card(result)
+        self.assertIn("Every checked signal stayed below", card.headline)
+        self.assertEqual(card.action_label, "Keep monitoring")
+
+    def test_contradiction_is_sensors_disagree_and_instrumentation_cause(self) -> None:
+        case = DEMO_CASES["synthetic_rf_veto"]
+        result = _run_file(case.csv_path, case.note)
+        self.assertEqual(presentation.result_word(result), "Sensors Disagree")
+        self.assertEqual(
+            result.output.hypotheses[0].root_cause.value, "instrumentation_fault"
+        )
+        card = presentation.answer_card(result)
+        self.assertEqual(card.confidence_label, "Sensors Disagree")
+        self.assertEqual(card.action_label, "Check the sensor first")
+
+    def test_alert_threshold_comes_from_the_config(self) -> None:
+        case = DEMO_CASES["synthetic_flowcool_supported"]
+        result = _run_file(case.csv_path, case.note)
+        rows = presentation.evidence_rows(result.evidence)
+        self.assertTrue(rows)
+        for row in rows:
+            self.assertEqual(row.alert_threshold, "3.50z")
+
+    def test_main_ui_copy_has_no_internal_enums(self) -> None:
+        forbidden = (
+            "VETOED",
+            "SUPPORTED",
+            "INSUFFICIENT",
+            "EXPERIMENTAL",
+            "UNVERIFIED",
+            "hypothesis_class",
+            "predicate",
+            "candidate",
+            "gate",
+            "veto",
+        )
+        for case in DEMO_CASES.values():
+            result = _run_file(case.csv_path, case.note)
+            card = presentation.answer_card(result)
+            summary = presentation.summarize(result)
+            copy = " ".join(
+                (
+                    card.headline,
+                    card.confidence_label,
+                    card.confidence_badge,
+                    card.confidence_help,
+                    card.action_label,
+                    card.action_explanation,
+                    summary.outcome_label,
+                    summary.mode_label,
+                    summary.triage,
+                    summary.explanation,
+                )
+            )
+            for token in forbidden:
+                self.assertNotIn(token, copy, f"{case.key}: {token}")
 
 
 class TableTests(unittest.TestCase):
@@ -106,7 +231,7 @@ class TableTests(unittest.TestCase):
         rows = presentation.model_narrative_rows(result.output)
         self.assertTrue(rows)
         gated = result.output.hypotheses[0]
-        self.assertEqual(gated.claim, "flowcool subsystem fault")
+        self.assertEqual(gated.claim, "Coolant loop fault")
         self.assertIsNotNone(gated.model_narrative)
         assert gated.model_narrative is not None
         self.assertEqual(gated.model_narrative.claim, rows[0].claim)
@@ -134,9 +259,7 @@ class DraftConfigTests(unittest.TestCase):
         return result.draft_yaml
 
     def test_slugify_rejects_unsafe_names(self) -> None:
-        self.assertEqual(
-            config_promotion.slugify_config_name("My Tool 2"), "my_tool_2"
-        )
+        self.assertEqual(config_promotion.slugify_config_name("My Tool 2"), "my_tool_2")
         with self.assertRaises(config_promotion.DraftConfigError):
             config_promotion.slugify_config_name("1bad")
         with self.assertRaises(config_promotion.DraftConfigError):
@@ -156,9 +279,7 @@ class DraftConfigTests(unittest.TestCase):
     def test_overwrite_requires_explicit_flag(self) -> None:
         draft = self._draft()
         with TemporaryDirectory() as temp_dir:
-            config_promotion.save_draft_config(
-                draft, "my_tool", config_dir=temp_dir
-            )
+            config_promotion.save_draft_config(draft, "my_tool", config_dir=temp_dir)
             with self.assertRaises(config_promotion.DraftConfigError):
                 config_promotion.save_draft_config(
                     draft, "my_tool", config_dir=temp_dir
@@ -171,9 +292,7 @@ class DraftConfigTests(unittest.TestCase):
     def test_invalid_draft_is_rejected(self) -> None:
         with TemporaryDirectory() as temp_dir:
             with self.assertRaises(config_promotion.DraftConfigError):
-                config_promotion.save_draft_config(
-                    "", "my_tool", config_dir=temp_dir
-                )
+                config_promotion.save_draft_config("", "my_tool", config_dir=temp_dir)
             bad_schema = (
                 "version: 2\nname: x\nprovenance: y\nsignals: []\nscenarios: {}\n"
             )

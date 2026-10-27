@@ -4,13 +4,13 @@ from collections.abc import Mapping
 from dataclasses import dataclass, replace
 from pathlib import Path
 
+from src.agents.differential_request import DEFAULT_CAUSE_MAX_TOKENS
 from src.agents.mapping_request import (
     DEFAULT_MAPPING_MAX_TOKENS,
     MappingEngine,
     ValidatedMapping,
     create_mapping_engine,
 )
-from src.agents.proposal_request import DEFAULT_MAX_TOKENS
 from src.agents.rca_engine import create_rca_engine
 from src.core.constraints import ConstraintRule
 from src.core.progress import (
@@ -81,6 +81,9 @@ class RunResult:
     external_search_query: str | None = None
     external_search_status: str = "not_run"
     external_search_count: int = 0
+    # Signal name -> engineer-facing label from the saved tool model. An
+    # unknown-machine draft uses the column name as its own label.
+    signal_labels: tuple[tuple[str, str], ...] = ()
 
 
 def _from_dossier(result: DossierResult) -> RunResult:
@@ -99,6 +102,7 @@ def _from_dossier(result: DossierResult) -> RunResult:
         mapping=None,
         evidence=result.evidence,
         output=result.output,
+        signal_labels=result.signal_labels,
     )
 
 
@@ -119,12 +123,20 @@ def _from_experimental(result: ExperimentalResult) -> RunResult:
         evidence=result.evidence,
         output=result.output,
         draft_yaml=result.draft_yaml,
+        signal_labels=(
+            tuple(
+                (item.column, item.column) for item in result.mapping.signals
+            )
+            if result.mapping is not None
+            else ()
+        ),
     )
 
 
 _EXTERNAL_SEARCH_OUTCOMES = frozenset(
     {
         AnalysisOutcome.ANALYSIS_INCONCLUSIVE,
+        AnalysisOutcome.ANALYSIS_CONTRADICTED,
         AnalysisOutcome.EXPERIMENTAL_UNVERIFIED_MAPPING,
     }
 )
@@ -139,8 +151,9 @@ def _with_external_search(
 ) -> RunResult:
     """Attach optional Tavily references without touching the Python verdict.
 
-    The search is attempted only for an inconclusive or experimental run. It
-    cannot add evidence, change a citation, or change the action.
+    The search is attempted only for an inconclusive, contradictory, or
+    experimental run. It cannot add evidence, change a citation, or change the
+    action.
     """
     if not enabled:
         report(progress, STAGE_TAVILY, "skipped")
@@ -149,9 +162,7 @@ def _with_external_search(
         report(progress, STAGE_TAVILY, "skipped")
         return replace(result, external_search_status="not_needed")
     client = (
-        tavily_search
-        if tavily_search is not None
-        else tavily_client_from_environment()
+        tavily_search if tavily_search is not None else tavily_client_from_environment()
     )
     if client is None:
         report(progress, STAGE_TAVILY, "skipped")
@@ -206,7 +217,7 @@ def analyze_csv(
     search_dir: str | Path = DEFAULT_SEARCH_DIR,
     engine_factory: EngineFactory | None = None,
     mapping_factory: MappingFactory | None = None,
-    max_tokens: int = DEFAULT_MAX_TOKENS,
+    max_tokens: int = DEFAULT_CAUSE_MAX_TOKENS,
     mapping_max_tokens: int = DEFAULT_MAPPING_MAX_TOKENS,
     tavily_search: TavilySearch | None = None,
     enable_external_search: bool = True,

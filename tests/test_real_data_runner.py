@@ -17,9 +17,7 @@ TEP_CONFIG = ROOT / "config" / "sensor_relations" / "tep_reactor.yaml"
 class RealDataRunnerTests(unittest.TestCase):
     Row = tuple[float, float, float]
 
-    def _write_csv(
-        self, path: Path, header: tuple[str, ...], rows: list[Row]
-    ) -> None:
+    def _write_csv(self, path: Path, header: tuple[str, ...], rows: list[Row]) -> None:
         with path.open("w", encoding="utf-8", newline="") as handle:
             writer = csv.writer(handle)
             writer.writerow(header)

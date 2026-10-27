@@ -38,6 +38,16 @@ class EvidenceModel(BaseModel):
     summary: str
 
 
+class CoverageModel(BaseModel):
+    """Python-owned split of declared channels for the audit tab."""
+
+    model_config = ConfigDict(extra="forbid", strict=True)
+
+    explained: list[str] = Field(default_factory=list)
+    unexplained: list[str] = Field(default_factory=list)
+    unexplained_large: list[str] = Field(default_factory=list)
+
+
 class ModelNarrative(BaseModel):
     """The model's explanation, shown separately and never used as the gate.
 
@@ -83,6 +93,52 @@ class ExternalSourceModel(BaseModel):
     snippet: str | None = None
 
 
+class ChallengeStatus(StrEnum):
+    """Audit-only lifecycle of the disconfirmation call."""
+
+    CHECKED = "checked"
+    DISCONFIRMED = "disconfirmed"
+    UNAVAILABLE = "unavailable"
+
+
+class ChallengeModel(BaseModel):
+    """Python's record of one model-proposed disconfirmation test."""
+
+    model_config = ConfigDict(extra="forbid", strict=True)
+
+    status: ChallengeStatus
+    text: str = ""
+    expected: str = ""
+    cited_evidence: list[str] = Field(default_factory=list)
+    target_signal: str | None = None
+    expectation_met: bool | None = None
+    downgraded: bool = False
+    note: str | None = None
+
+
+class DifferentialEntryModel(BaseModel):
+    """One row of the all-check differential.
+
+    ``proposed_by_model`` marks a cause with no saved check. It is always
+    ``INSUFFICIENT`` and cannot carry a supported action.
+    """
+
+    model_config = ConfigDict(extra="forbid", strict=True)
+
+    check: str
+    title: str
+    root_cause: RootCauseCategory
+    status: Verdict
+    evidence_for: list[str] = Field(default_factory=list)
+    evidence_against: list[str] = Field(default_factory=list)
+    missing_signals: list[str] = Field(default_factory=list)
+    action: SuggestedAction
+    reason: str | None = None
+    proposed_by_model: bool = False
+    has_anomaly: bool = False
+    challenge_failed: bool = False
+
+
 class RCAOutputModel(BaseModel):
     model_config = ConfigDict(extra="forbid", strict=True)
 
@@ -99,3 +155,8 @@ class RCAOutputModel(BaseModel):
     required_next_checks: list[str] = Field(default_factory=list)
     prohibited_actions_detected: list[str] = Field(default_factory=list)
     external_sources: list[ExternalSourceModel] = Field(default_factory=list)
+    coverage: CoverageModel | None = None
+    differential: list[DifferentialEntryModel] = Field(default_factory=list)
+    headline_check: str | None = None
+    alternative_count: int = 0
+    challenge: ChallengeModel | None = None

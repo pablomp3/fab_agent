@@ -1,0 +1,30 @@
+# Synthetic RF station. The companion channels must move with the RF sensor for
+# an equipment fault; if they stay flat, the result is Sensors Disagree.
+tool:
+  name: synthetic_rf
+  label: Synthetic RF station
+  description: "Synthetic RF generator demo. Values are not field calibration."
+
+baseline:
+  mode: nominal_file
+  file: synthetic_rf_nominal.csv
+
+signals:
+  - {name: sensor_17, label: RF power, unit: null, alert_at: 3.5}
+  - {name: impedance, label: Chamber impedance, unit: null, alert_at: 3.5}
+  - {name: thermal, label: Chamber temperature, unit: null, alert_at: 3.5}
+  - {name: pressure, label: Chamber pressure, unit: null, alert_at: 3.5}
+
+checks:
+  - id: rf_arc
+    label: RF generator arc
+    kind: equipment_fault
+    must_be_unusual:
+      - {signal: sensor_17, direction: any}
+      - {signal: impedance, direction: any}
+      - {signal: thermal, direction: any}
+      - {signal: pressure, direction: any}
+    corroborated_by: [impedance, thermal, pressure]
+    must_stay_normal: []
+    action: INSPECT_COMPONENT
+    advice: "Inspect the RF generator. If the companion channels stay flat, check the sensor first."

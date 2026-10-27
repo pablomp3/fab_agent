@@ -48,7 +48,7 @@ _TEMPLATES: tuple[GeneratorTemplate, ...] = (
             "inconclusive run leaves them nominal."
         ),
         note="Flowcool loop excursion during the RF step.",
-        config_path=CONFIG_DIR / "ion_mill_phm18.yaml",
+        config_path=CONFIG_DIR / "synthetic_flowcool.yaml",
         columns=("FLOWCOOLFLOWRATE", "FLOWCOOLPRESSURE"),
         centers=(10.0, 10.0),
         sigmas=(0.05, 0.05),
@@ -78,10 +78,10 @@ _TEMPLATES: tuple[GeneratorTemplate, ...] = (
             "RF reflectometer excursion on Chamber B; corroborating channels "
             "look quiet."
         ),
-        config_path=CONFIG_DIR / "synthetic_twin.yaml",
+        config_path=CONFIG_DIR / "synthetic_rf.yaml",
         columns=("sensor_17", "impedance", "thermal", "pressure"),
-        centers=(10.0, 50.0, 300.0, 5.0),
-        sigmas=(0.05, 0.2, 1.0, 0.02),
+        centers=(10.0, 10.0, 10.0, 10.0),
+        sigmas=(0.5, 0.5, 0.5, 0.5),
         primary_indices=(0,),
         behaviors=("supported", "inconclusive", "contradiction"),
         column_notes=(
@@ -97,21 +97,24 @@ _TEMPLATES: tuple[GeneratorTemplate, ...] = (
         label="TEP-style dataset — feed system",
         description=(
             "Three configured feed-system channels. A supported run moves the "
-            "feed flow and valve; an inconclusive run leaves the cause channels "
-            "nominal."
+            "feed flow and reactor pressure together; an inconclusive run leaves "
+            "the pattern nominal."
         ),
-        note="Reactor feed disturbance suspected; A feed flow and valve look off.",
+        note=(
+            "Reactor feed disturbance suspected; A feed flow and reactor pressure "
+            "look off."
+        ),
         config_path=CONFIG_DIR / "tep_reactor.yaml",
         columns=("XMEAS(1)", "XMV(3)", "XMEAS(7)"),
         centers=(0.5, 32.0, 2705.0),
         sigmas=(0.01, 0.2, 1.0),
-        primary_indices=(0, 1),
+        primary_indices=(0, 2),
         behaviors=("supported", "inconclusive"),
         column_notes=(
             ("time", "Row index in the generated export."),
-            ("XMEAS(1)", "A feed flow; a configured cause channel."),
-            ("XMV(3)", "A feed valve position; a configured cause channel."),
-            ("XMEAS(7)", "Reactor pressure; corroboration only."),
+            ("XMEAS(1)", "A feed flow; a configured pattern channel."),
+            ("XMV(3)", "A feed valve position; recorded but not part of the check."),
+            ("XMEAS(7)", "Reactor pressure; the second configured pattern channel."),
         ),
     ),
     GeneratorTemplate(

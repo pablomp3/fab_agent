@@ -30,18 +30,14 @@ class DemoSampleTests(unittest.TestCase):
         result = _run("flowcool_supported.csv")
         self.assertEqual(result.mode, "safe")
         self.assertIs(result.outcome, AnalysisOutcome.ANALYSIS_SUPPORTED)
-        self.assertIs(
-            result.suggested_next_action, SuggestedAction.INSPECT_COMPONENT
-        )
+        self.assertIs(result.suggested_next_action, SuggestedAction.INSPECT_COMPONENT)
         self.assertIs(result.output.hypotheses[0].status, Verdict.SUPPORTED)
 
     def test_flat_flowcool_sample_abstains(self) -> None:
         result = _run("flowcool_inconclusive.csv")
         self.assertEqual(result.mode, "safe")
         self.assertIs(result.outcome, AnalysisOutcome.ANALYSIS_INCONCLUSIVE)
-        self.assertIs(
-            result.suggested_next_action, SuggestedAction.COLLECT_MORE_DATA
-        )
+        self.assertIs(result.suggested_next_action, SuggestedAction.CONTINUE_MONITORING)
         self.assertIs(result.output.hypotheses[0].status, Verdict.INSUFFICIENT)
         self.assertTrue(result.output.required_next_checks)
 
@@ -53,13 +49,14 @@ class DemoSampleTests(unittest.TestCase):
             result.suggested_next_action, SuggestedAction.REVIEW_CONTRADICTION
         )
         self.assertIs(result.output.hypotheses[0].status, Verdict.VETOED)
+        self.assertEqual(
+            result.output.hypotheses[0].root_cause.value, "instrumentation_fault"
+        )
 
     def test_unknown_tool_sample_reaches_the_experimental_arc(self) -> None:
         result = _run("unknown_tool.csv")
         self.assertEqual(result.mode, "experimental")
-        self.assertIs(
-            result.outcome, AnalysisOutcome.EXPERIMENTAL_UNVERIFIED_MAPPING
-        )
+        self.assertIs(result.outcome, AnalysisOutcome.EXPERIMENTAL_UNVERIFIED_MAPPING)
         self.assertIs(
             result.suggested_next_action, SuggestedAction.REVIEW_DRAFT_MAPPING
         )

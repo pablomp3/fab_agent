@@ -18,6 +18,7 @@ class EvidenceKind(StrEnum):
 
 class Predicate(StrEnum):
     HAS_PRIMARY_SIGNAL_ANOMALY = "has_primary_signal_anomaly"
+    HAS_ALL_PRIMARY_SIGNALS_ANOMALY = "has_all_primary_signals_anomaly"
     HAS_CORRELATED_ACTUATOR_RESPONSE = "has_correlated_actuator_response"
     HAS_EXPECTED_SPATIAL_SIGNATURE = "has_expected_spatial_signature"
     HAS_MANUAL_OR_PRIOR_CASE_SUPPORT = "has_manual_or_prior_case_support"
@@ -99,6 +100,57 @@ class AnalysisOutcome(StrEnum):
 
 
 @dataclass(frozen=True, slots=True)
+class BaselineSpec:
+    """Where the normal reference comes from.
+
+    ``lead_in`` uses the first rows of the upload. ``nominal_file`` uses a
+    separate, curated export. ``recipe_step`` is accepted by the schema but is
+    deliberately not scored yet; callers must fail closed rather than silently
+    falling back to the whole upload. A file path is resolved by the loader,
+    never by ``src/core``.
+    """
+
+    mode: str
+    rows: int | None = None
+    file: str | None = None
+    step_column: str | None = None
+
+    def __post_init__(self) -> None:
+        if self.mode not in {"lead_in", "nominal_file", "recipe_step"}:
+            raise ValueError(f"unsupported baseline mode: {self.mode}")
+        if self.mode == "lead_in":
+            if self.rows is None or self.rows < 1:
+                raise ValueError("lead_in baseline requires at least one row")
+            if self.file is not None or self.step_column is not None:
+                raise ValueError("lead_in baseline cannot set file or step_column")
+        elif self.mode == "nominal_file":
+            if not self.file:
+                raise ValueError("nominal_file baseline requires a file")
+            if self.rows is not None or self.step_column is not None:
+                raise ValueError("nominal_file baseline cannot set rows or step_column")
+        else:
+            if not self.step_column:
+                raise ValueError("recipe_step baseline requires a step_column")
+            if self.rows is not None or self.file is not None:
+                raise ValueError("recipe_step baseline cannot set rows or file")
+
+
+@dataclass(frozen=True, slots=True)
+class Coverage:
+    """Which declared channels the configured check accounts for.
+
+    ``unexplained`` lists channels with an anomaly outside the check.
+    ``unexplained_large`` is the subset at or above the product policy limit;
+    it is the subset that can demote a confirmation. The limit itself lives
+    outside this generic module.
+    """
+
+    explained: tuple[str, ...] = ()
+    unexplained: tuple[str, ...] = ()
+    unexplained_large: tuple[str, ...] = ()
+
+
+@dataclass(frozen=True, slots=True)
 class Evidence:
     evidence_id: str
     kind: EvidenceKind
@@ -111,6 +163,10 @@ class Evidence:
     computed_by: str
     summary: str
     window_basis: str | None = None
+    # The calibrated alert threshold this record was judged against, if the
+    # configuration declared one. ``None`` means "not configured"; the UI must
+    # not substitute a default.
+    threshold: float | None = None
 
     def __post_init__(self) -> None:
         if not self.evidence_id:
@@ -119,11 +175,17 @@ class Evidence:
             raise ValueError("evidence value must be finite or None")
         if self.window is not None and self.window[0] > self.window[1]:
             raise ValueError("evidence window start must not exceed its end")
+        if self.threshold is not None:
+            if not math.isfinite(self.threshold):
+                raise ValueError("evidence threshold must be finite or None")
+            if self.threshold < 0:
+                raise ValueError("evidence threshold must be non-negative")
 
 
 @dataclass(frozen=True, slots=True)
 class PredicateSet:
     has_primary_signal_anomaly: bool = False
+    has_all_primary_signals_anomaly: bool = False
     has_correlated_actuator_response: bool = False
     has_expected_spatial_signature: bool = False
     has_manual_or_prior_case_support: bool = False
@@ -134,6 +196,8 @@ class PredicateSet:
     def enabled(self, predicate: Predicate) -> bool:
         if predicate is Predicate.HAS_PRIMARY_SIGNAL_ANOMALY:
             return self.has_primary_signal_anomaly
+        if predicate is Predicate.HAS_ALL_PRIMARY_SIGNALS_ANOMALY:
+            return self.has_all_primary_signals_anomaly
         if predicate is Predicate.HAS_CORRELATED_ACTUATOR_RESPONSE:
             return self.has_correlated_actuator_response
         if predicate is Predicate.HAS_EXPECTED_SPATIAL_SIGNATURE:

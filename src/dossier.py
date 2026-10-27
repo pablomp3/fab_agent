@@ -3,13 +3,14 @@ from __future__ import annotations
 from collections.abc import Callable, Mapping
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Protocol
+from typing import Protocol, runtime_checkable
 
 from src.action_guidance import action_explanation, default_action_for
+from src.agents.differential_request import DEFAULT_CAUSE_MAX_TOKENS
 from src.agents.proposal_request import DEFAULT_MAX_TOKENS
 from src.agents.rca_engine import create_rca_engine
 from src.config_loader import load_relations
-from src.config_types import CandidateConfig
+from src.config_types import CandidateConfig, ScenarioConfig
 from src.core.column_profile import MalformedCsvError
 from src.core.constraints import ConstraintRule
 from src.core.duckdb_exec import extract_evidence
@@ -29,6 +30,7 @@ from src.core.types import (
     AnalysisOutcome,
     Confidence,
     Evidence,
+    SignalSpec,
     SuggestedAction,
 )
 from src.schemas.models import RCAOutputModel
@@ -56,6 +58,19 @@ class HypothesisGenerator(Protocol):
     ) -> RCAOutputModel: ...
 
 
+@runtime_checkable
+class DifferentialGenerator(Protocol):
+    def assess_checks(
+        self,
+        evidence: tuple[Evidence, ...],
+        scenarios: Mapping[str, ScenarioConfig],
+        *,
+        context: str | None = None,
+        max_tokens: int = DEFAULT_CAUSE_MAX_TOKENS,
+        preferred_check: str | None = None,
+    ) -> RCAOutputModel: ...
+
+
 EngineFactory = Callable[
     [PredicateConfig, Mapping[str, ConstraintRule]], HypothesisGenerator
 ]
@@ -70,6 +85,9 @@ class DossierResult:
     output: RCAOutputModel
     outcome: AnalysisOutcome
     detail: str | None = None
+    # Human labels authored in the tool model. The UI uses them instead of raw
+    # CSV column names; the evidence and gate still use the column names.
+    signal_labels: tuple[tuple[str, str], ...] = ()
 
     @property
     def analysis_performed(self) -> bool:
@@ -123,13 +141,28 @@ def _live_engine_factory(
     return create_rca_engine(predicates, rules, config_path=DEFAULT_MODELS_CONFIG)
 
 
+def _scoped_signals(
+    scenarios: Mapping[str, ScenarioConfig],
+) -> tuple[SignalSpec, ...]:
+    """Union every check's scope so all differential rows share one evidence set."""
+    signals: list[SignalSpec] = []
+    seen: set[str] = set()
+    for scenario in scenarios.values():
+        for spec in scenario.declared_signals or scenario.signals:
+            if spec.name in seen:
+                continue
+            seen.add(spec.name)
+            signals.append(spec)
+    return tuple(signals)
+
+
 def analyze_dossier(
     csv_path: str | Path,
     engineer_note: str,
     *,
     search_dir: str | Path = DEFAULT_SEARCH_DIR,
     engine_factory: EngineFactory = _live_engine_factory,
-    max_tokens: int = DEFAULT_MAX_TOKENS,
+    max_tokens: int = DEFAULT_CAUSE_MAX_TOKENS,
     progress: ProgressCallback | None = None,
 ) -> DossierResult:
     """Run the engineer-style flow: header triage, DuckDB evidence, gated model.
@@ -160,9 +193,7 @@ def analyze_dossier(
             "The file is not readable as a CSV (encoding or delimiter problem); "
             "re-export it as a UTF-8 CSV."
         )
-        return _fail_result(
-            path, bounded_note, AnalysisOutcome.INPUT_MALFORMED, detail
-        )
+        return _fail_result(path, bounded_note, AnalysisOutcome.INPUT_MALFORMED, detail)
     if inspection.row_count == 0:
         report(progress, STAGE_READ, "failed")
         detail = "The file has a header but no readings; nothing to check."
@@ -184,20 +215,33 @@ def analyze_dossier(
     relations = load_relations(selection.config_path)
     scenario = relations.scenarios[selection.scenario_name]
     report(progress, STAGE_DUCKDB, "running")
-    evidence = extract_evidence(path, scenario.signals)
+    evidence = extract_evidence(
+        path,
+        _scoped_signals(relations.scenarios),
+        baseline=scenario.baseline,
+    )
     report(progress, STAGE_DUCKDB, "done")
     report(progress, STAGE_PYTHON, "running")
     report(progress, STAGE_PYTHON, "done")
     report(progress, STAGE_MODEL, "running")
     engine = engine_factory(scenario.predicate_config, scenario.rules)
     try:
-        output = engine.generate_hypotheses(
-            evidence,
-            context=bounded_note,
-            max_tokens=max_tokens,
-            supported_action=scenario.supported_action,
-            candidate=scenario.candidate,
-        )
+        if isinstance(engine, DifferentialGenerator):
+            output = engine.assess_checks(
+                evidence,
+                relations.scenarios,
+                context=bounded_note,
+                max_tokens=max_tokens,
+                preferred_check=selection.scenario_name,
+            )
+        else:
+            output = engine.generate_hypotheses(
+                evidence,
+                context=bounded_note,
+                max_tokens=max_tokens,
+                supported_action=scenario.supported_action,
+                candidate=scenario.candidate,
+            )
     except PayloadTooLarge:
         report(progress, STAGE_MODEL, "failed")
         report(progress, STAGE_GATE, "failed")
@@ -213,6 +257,7 @@ def analyze_dossier(
             _fail_closed(AnalysisOutcome.EVIDENCE_TOO_LARGE, detail),
             AnalysisOutcome.EVIDENCE_TOO_LARGE,
             detail,
+            signal_labels=tuple(sorted(relations.signal_labels.items())),
         )
     report(
         progress,
@@ -228,4 +273,5 @@ def analyze_dossier(
         output,
         output.outcome,
         None,
+        signal_labels=tuple(sorted(relations.signal_labels.items())),
     )

@@ -34,14 +34,13 @@ class E2ESuiteTests(unittest.TestCase):
                 safe["suggested_next_action"],
                 {
                     "COLLECT_MORE_DATA",
+                    "CONTINUE_MONITORING",
                     "AUTHOR_TOOL_CONFIG",
                     "REVIEW_CONTRADICTION",
                     "ESCALATE_TO_ENGINEER",
                 },
             )
-            self.assertEqual(
-                experimental["outcome"], "EXPERIMENTAL_UNVERIFIED_MAPPING"
-            )
+            self.assertEqual(experimental["outcome"], "EXPERIMENTAL_UNVERIFIED_MAPPING")
             self.assertTrue(experimental["analysis_performed"])
             self.assertTrue(experimental["model_called"])
             self.assertTrue(experimental["unverified_tagged"])
@@ -53,9 +52,7 @@ class E2ESuiteTests(unittest.TestCase):
         cases = default_cases()
         self.assertGreaterEqual(len(cases), 3)
         self.assertTrue(all(case.expectation_note for case in cases))
-        self.assertEqual(
-            len({case.case_id for case in cases}), len(cases)
-        )
+        self.assertEqual(len({case.case_id for case in cases}), len(cases))
 
 
 if __name__ == "__main__":

@@ -14,7 +14,7 @@ from src.core.types import Verdict
 from src.model_config import ModelRoute, load_model_route
 from src.schemas.models import RCAOutputModel
 
-POSITIVE_CONFIG_NAME = "config/sensor_relations/synthetic_twin_positive.yaml"
+POSITIVE_CONFIG_NAME = "benchmarks/evaluator/fixtures/v1/synthetic_twin_positive.yaml"
 MODELS_CONFIG_NAME = "config/models.yaml"
 RESULT_NAME = "benchmarks/evaluator/results/w4_positive_check.json"
 OFFLINE_RESULT_NAME = "benchmarks/evaluator/results/w4_positive_check_offline.json"

@@ -84,9 +84,7 @@ class RcaDiagnosticsTests(unittest.TestCase):
         with self.assertLogs("src.agents.rca_engine", level="WARNING") as captured:
             output = engine.generate_hypotheses(evidence)
 
-        self.assertEqual(
-            output.suggested_next_action, SuggestedAction.RETRY_ANALYSIS
-        )
+        self.assertEqual(output.suggested_next_action, SuggestedAction.RETRY_ANALYSIS)
         self.assertEqual(output.hypotheses, [])
         self.assertIs(engine.last_failure_category, FailureCategory.SCHEMA_VALIDATION)
         self.assertIsNotNone(engine.last_validation_details)
@@ -108,9 +106,7 @@ class RcaDiagnosticsTests(unittest.TestCase):
         with self.assertLogs("src.agents.rca_engine", level="WARNING") as captured:
             output = engine.generate_hypotheses(evidence)
 
-        self.assertEqual(
-            output.suggested_next_action, SuggestedAction.RETRY_ANALYSIS
-        )
+        self.assertEqual(output.suggested_next_action, SuggestedAction.RETRY_ANALYSIS)
         self.assertEqual(
             engine.last_validation_details, (ValidationDetail.MALFORMED_JSON,)
         )
@@ -121,9 +117,7 @@ class RcaDiagnosticsTests(unittest.TestCase):
 
         output = engine.generate_hypotheses(evidence)
 
-        self.assertEqual(
-            output.suggested_next_action, SuggestedAction.RETRY_ANALYSIS
-        )
+        self.assertEqual(output.suggested_next_action, SuggestedAction.RETRY_ANALYSIS)
         self.assertEqual(output.hypotheses, [])
         self.assertIs(engine.last_failure_category, FailureCategory.FINISH_REASON)
         self.assertIs(engine.last_finish_reason, FinishReasonDetail.LENGTH)
@@ -136,9 +130,7 @@ class RcaDiagnosticsTests(unittest.TestCase):
         with self.assertLogs("src.agents.rca_engine", level="WARNING") as captured:
             output = engine.generate_hypotheses(evidence)
 
-        self.assertEqual(
-            output.suggested_next_action, SuggestedAction.RETRY_ANALYSIS
-        )
+        self.assertEqual(output.suggested_next_action, SuggestedAction.RETRY_ANALYSIS)
         self.assertIs(engine.last_finish_reason, FinishReasonDetail.OTHER)
         logged = " ".join(captured.output)
         self.assertIn("finish_detail=other", logged)
@@ -154,9 +146,7 @@ class RcaDiagnosticsTests(unittest.TestCase):
         with self.assertLogs("src.agents.rca_engine", level="WARNING") as captured:
             output = engine.generate_hypotheses(evidence)
 
-        self.assertEqual(
-            output.suggested_next_action, SuggestedAction.RETRY_ANALYSIS
-        )
+        self.assertEqual(output.suggested_next_action, SuggestedAction.RETRY_ANALYSIS)
         self.assertIs(engine.last_failure_category, FailureCategory.TRANSPORT)
         logged = " ".join(captured.output)
         self.assertNotIn("SYNTHETIC_PROVIDER_TEXT", logged)
@@ -169,9 +159,7 @@ class RcaDiagnosticsTests(unittest.TestCase):
         with self.assertLogs("src.agents.rca_engine", level="WARNING") as captured:
             output = engine.generate_hypotheses(evidence)
 
-        self.assertEqual(
-            output.suggested_next_action, SuggestedAction.RETRY_ANALYSIS
-        )
+        self.assertEqual(output.suggested_next_action, SuggestedAction.RETRY_ANALYSIS)
         self.assertIs(engine.last_failure_category, FailureCategory.SIZE)
         self.assertNotIn(marker, " ".join(captured.output))
 

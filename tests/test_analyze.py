@@ -14,8 +14,8 @@ from src.core.types import AnalysisOutcome, SuggestedAction
 
 _PHM_EXPORT = (
     "time,FLOWCOOLFLOWRATE,FLOWCOOLPRESSURE\n"
-    "1,10.0,10.0\n2,11.0,11.0\n3,10.0,10.0\n"
-    "4,11.0,11.0\n5,10.0,10.0\n6,1000.0,11.0\n"
+    "1,10.0,10.0\n2,10.4,10.3\n3,9.8,9.9\n"
+    "4,10.2,10.1\n5,9.9,9.8\n6,1000.0,1000.0\n"
 )
 _UNKNOWN_EXPORT = (
     "a,b,c\n10.0,10.0,10.0\n11.0,11.0,11.0\n10.0,10.0,10.0\n"
@@ -70,9 +70,7 @@ class AnalyzeCsvTests(unittest.TestCase):
         self.assertEqual(result.mode, "safe")
         self.assertFalse(result.fallback_used)
         self.assertIs(result.outcome, AnalysisOutcome.INPUT_MALFORMED)
-        self.assertIs(
-            result.suggested_next_action, SuggestedAction.FIX_FILE_FORMAT
-        )
+        self.assertIs(result.suggested_next_action, SuggestedAction.FIX_FILE_FORMAT)
 
 
 if __name__ == "__main__":

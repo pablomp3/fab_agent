@@ -37,7 +37,10 @@ class PredicateConfig:
     primary_signals: frozenset[str] = frozenset()
     actuator_pairs: tuple[tuple[str, str], ...] = ()
     expected_spatial_features: tuple[SpatialExpectation, ...] = ()
+    # v1: at least one corroborating channel should move, so all-nominal is a
+    # contradiction. v2 ``must_stay_normal`` uses the explicit forbidden set.
     corroboration_signals: frozenset[str] = frozenset()
+    forbidden_anomaly_signals: frozenset[str] = frozenset()
     required_evidence_ids: frozenset[str] = frozenset()
     temporal_precedence_pairs: tuple[tuple[str, str], ...] = ()
 
@@ -59,6 +62,9 @@ def derive_predicates(store: EvidenceStore, config: PredicateConfig) -> Predicat
         if any(item.kind is EvidenceKind.SENSOR_NOMINAL for item in items)
     }
     primary_anomaly = bool(anomaly_signals & config.primary_signals)
+    all_primary_anomaly = bool(config.primary_signals) and (
+        config.primary_signals <= anomaly_signals
+    )
     actuator_response = any(
         primary in anomaly_signals
         and actuator in anomaly_signals
@@ -72,14 +78,20 @@ def derive_predicates(store: EvidenceStore, config: PredicateConfig) -> Predicat
         for item in evidence
     )
 
-    instrumentation_contradiction = (
-        primary_anomaly
-        and bool(config.corroboration_signals)
+    corroboration_contradiction = (
+        bool(config.corroboration_signals)
         and config.corroboration_signals <= nominal_signals
+    )
+    forbidden_contradiction = bool(
+        config.forbidden_anomaly_signals & anomaly_signals
+    )
+    instrumentation_contradiction = primary_anomaly and (
+        corroboration_contradiction or forbidden_contradiction
     )
     required_channels = (
         config.primary_signals
         | config.corroboration_signals
+        | config.forbidden_anomaly_signals
         | frozenset(signal for pair in config.actuator_pairs for signal in pair)
         | frozenset(
             signal for pair in config.temporal_precedence_pairs for signal in pair
@@ -104,6 +116,7 @@ def derive_predicates(store: EvidenceStore, config: PredicateConfig) -> Predicat
     )
     return PredicateSet(
         has_primary_signal_anomaly=primary_anomaly,
+        has_all_primary_signals_anomaly=all_primary_anomaly,
         has_correlated_actuator_response=actuator_response,
         has_expected_spatial_signature=spatial,
         has_manual_or_prior_case_support=manual_support,

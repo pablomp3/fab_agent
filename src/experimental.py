@@ -56,6 +56,7 @@ from src.core.types import (
 from src.dossier import (
     DEFAULT_MODELS_CONFIG,
     MAX_ENGINEER_NOTE_CHARS,
+    DifferentialGenerator,
     EngineFactory,
     HypothesisGenerator,
 )
@@ -346,12 +347,22 @@ def analyze_experimental(
     )
     report(progress, STAGE_MODEL, "running")
     try:
-        output = engine.generate_hypotheses(
-            evidence,
-            context=bounded_note,
-            max_tokens=max_tokens,
-            candidate=candidate,
-        )
+        if isinstance(engine, DifferentialGenerator):
+            # Auto mode has no saved check. The cause finder may propose a
+            # candidate, but Python can only mark it for review.
+            output = engine.assess_checks(
+                evidence,
+                {},
+                context=bounded_note,
+                max_tokens=max_tokens,
+            )
+        else:
+            output = engine.generate_hypotheses(
+                evidence,
+                context=bounded_note,
+                max_tokens=max_tokens,
+                candidate=candidate,
+            )
     except PayloadTooLarge:
         report(progress, STAGE_MODEL, "failed")
         report(progress, STAGE_GATE, "failed")
@@ -376,13 +387,19 @@ def analyze_experimental(
         "done" if output.model_called else "skipped",
     )
     report(progress, STAGE_GATE, "done")
+    review_note = (
+        "Review the draft mapping and add a saved check before treating any "
+        "proposed cause as confirmed."
+    )
+    checks = list(output.required_next_checks)
+    if review_note not in checks:
+        checks.append(review_note)
     output = output.model_copy(
         update={
             "outcome": AnalysisOutcome.EXPERIMENTAL_UNVERIFIED_MAPPING,
             "suggested_next_action": SuggestedAction.REVIEW_DRAFT_MAPPING,
-            "explanation": action_explanation(
-                SuggestedAction.REVIEW_DRAFT_MAPPING
-            ),
+            "explanation": action_explanation(SuggestedAction.REVIEW_DRAFT_MAPPING),
+            "required_next_checks": checks,
         }
     )
     return _result(

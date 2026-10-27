@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import sys
+from dataclasses import replace
 from pathlib import Path
 from typing import cast
 
@@ -18,105 +19,72 @@ from src.core.constraints import ConstraintRule
 from src.core.duckdb_exec import extract_evidence
 from src.core.evidence import EvidenceStore
 from src.core.pipeline import Candidate, assess_candidate
+from src.core.safety_gate import apply_safety_gate
 from src.core.sufficiency import PredicateConfig, derive_predicates
-from src.core.types import Predicate, SignalSpec
+from src.core.types import Predicate, SuggestedAction, Verdict
+from src.policy import COVERAGE_UNEXPLAINED_LARGE_Z
 from src.schemas.models import RootCauseCategory
 
-_ROBUST_Z_THRESHOLD = 3.5
-_THRESHOLD_SOURCE_PREFIX = f"standard_robust_mad_multiplier={_ROBUST_Z_THRESHOLD}"
 
+def _legacy_tep_scenario(domain: LoadedRelations) -> ScenarioConfig:
+    """Keep the published W5 TEP comparison on its original global baseline.
 
-def build_scenario(case: RealDataCase, domain: LoadedRelations) -> ScenarioConfig:
-    if domain.name == "tep_reactor":
-        return _build_tep_scenario(case, domain)
-    if domain.name == "ion_mill_phm18":
-        return _build_phm_scenario(case, domain)
-    raise ValueError(f"unsupported domain: {domain.name}")
-
-
-def _build_tep_scenario(case: RealDataCase, domain: LoadedRelations) -> ScenarioConfig:
-    cause = domain.roles["cause"]
-    symptom = domain.roles["symptom"]
-    signals = tuple(
-        SignalSpec(
-            name=spec.name,
-            unit=spec.unit,
-            robust_z_threshold=_ROBUST_Z_THRESHOLD,
-            threshold_source=f"{_THRESHOLD_SOURCE_PREFIX};nominal_baseline:{case.nominal_baseline_path}",
-        )
-        for spec in domain.signals
-    )
-    predicates = PredicateConfig(
-        primary_signals=frozenset(cause),
-        corroboration_signals=frozenset(symptom),
-    )
-    rules = {
-        "feed_disturbance": ConstraintRule(
-            require_all=frozenset({Predicate.HAS_PRIMARY_SIGNAL_ANOMALY}),
-            forbid_any=frozenset({Predicate.HAS_MISSING_REQUIRED_EVIDENCE}),
-            veto_if_any=frozenset(),
-        )
-    }
+    The product TEP config is v2. This benchmark artifact predates the normal
+    reference and is intentionally left unchanged until the Phase 5
+    re-baselining; changing it here would silently rewrite the recorded cases.
+    """
+    cause = ("XMEAS(1)", "XMV(3)")
+    symptom = ("XMEAS(7)",)
     return ScenarioConfig(
-        signals=signals,
-        predicate_config=predicates,
-        rules=rules,
+        signals=domain.signals,
+        predicate_config=PredicateConfig(
+            primary_signals=frozenset(cause),
+            corroboration_signals=frozenset(symptom),
+        ),
+        rules={
+            "feed_disturbance": ConstraintRule(
+                require_all=frozenset({Predicate.HAS_PRIMARY_SIGNAL_ANOMALY}),
+                forbid_any=frozenset({Predicate.HAS_MISSING_REQUIRED_EVIDENCE}),
+                veto_if_any=frozenset(),
+            )
+        },
         candidate=CandidateConfig(
             claim="A feed disturbance",
             hypothesis_class="feed_disturbance",
             cited_signals=cause + symptom,
-        ),
-    )
-
-
-def _build_phm_scenario(case: RealDataCase, domain: LoadedRelations) -> ScenarioConfig:
-    subsystem = cast(str, case.subsystem)
-    subsystem_signals = domain.groups[subsystem]
-    signals = tuple(
-        SignalSpec(
-            name=spec.name,
-            unit=spec.unit,
-            robust_z_threshold=_ROBUST_Z_THRESHOLD,
-            threshold_source=f"{_THRESHOLD_SOURCE_PREFIX};nominal_baseline:{case.nominal_baseline_path}",
-        )
-        for spec in domain.signals
-    )
-    predicates = PredicateConfig(
-        primary_signals=frozenset(subsystem_signals),
-    )
-    rules = {
-        "equipment_fault": ConstraintRule(
-            require_all=frozenset({Predicate.HAS_PRIMARY_SIGNAL_ANOMALY}),
-            forbid_any=frozenset({Predicate.HAS_MISSING_REQUIRED_EVIDENCE}),
-            veto_if_any=frozenset(),
-        )
-    }
-    return ScenarioConfig(
-        signals=signals,
-        predicate_config=predicates,
-        rules=rules,
-        candidate=CandidateConfig(
-            claim=f"{case.subsystem} subsystem fault",
-            hypothesis_class="equipment_fault",
-            cited_signals=subsystem_signals,
-            root_cause=RootCauseCategory.EQUIPMENT_FAULT,
+            root_cause=RootCauseCategory.UPSTREAM_PROCESS,
             failure_mode=(
-                "Subsystem fault; confirm the specific mode during inspection."
+                "Feed-system disturbance; confirm the specific valve or feed "
+                "line during review."
             ),
             mechanism=(
-                "Configured subsystem relationship; the physical mechanism is "
-                "not asserted."
+                "The configured TEP cause channels moved together; the "
+                "configuration does not assert a specific physical mechanism."
             ),
         ),
-        supported_action=domain.scenarios[subsystem].supported_action,
+        supported_action=SuggestedAction.ESCALATE_TO_ENGINEER,
+        baseline=None,
+        declared_signals=domain.signals,
     )
+
+
+def build_scenario(case: RealDataCase, domain: LoadedRelations) -> ScenarioConfig:
+    if domain.name == "tep_reactor":
+        return _legacy_tep_scenario(domain)
+    if domain.name == "ion_mill_phm18":
+        return domain.scenarios["coolant_loop"]
+    raise ValueError(f"unsupported domain: {domain.name}")
 
 
 def evaluate_case(
     root: Path, case: RealDataCase, domain: LoadedRelations
 ) -> CaseResult:
     scenario = build_scenario(case, domain)
-    evidence = extract_evidence(case.csv_path, scenario.signals)
+    evidence = extract_evidence(
+        case.csv_path,
+        scenario.declared_signals or scenario.signals,
+        baseline=scenario.baseline,
+    )
     store = EvidenceStore(evidence)
     evidence_by_signal = {
         item.signal: item for item in evidence if item.signal is not None
@@ -138,19 +106,26 @@ def evaluate_case(
         scenario.predicate_config,
         scenario.rules,
         scenario.supported_action,
+        large_z=COVERAGE_UNEXPLAINED_LARGE_Z,
     )
     predicates = derive_predicates(store, scenario.predicate_config)
+    verdict = assessment.constraints.verdict
+    action = assessment.suggested_next_action
+    if verdict is Verdict.SUPPORTED and assessment.coverage.unexplained_large:
+        verdict = Verdict.INSUFFICIENT
+        action = apply_safety_gate(verdict, scenario.supported_action)
+    constraints = replace(assessment.constraints, verdict=verdict)
     passed = (
-        assessment.constraints.verdict.value == case.expected_verdict
-        and assessment.suggested_next_action.value in case.expected_actions
+        verdict.value == case.expected_verdict
+        and action.value in case.expected_actions
     )
     return CaseResult(
         case_id=case.case_id,
         candidate=candidate,
-        verdict=assessment.constraints.verdict,
-        suggested_next_action=assessment.suggested_next_action,
+        verdict=verdict,
+        suggested_next_action=action,
         predicates=predicates,
-        constraints=assessment.constraints,
+        constraints=constraints,
         evidence=evidence,
         passed=passed,
     )

@@ -21,9 +21,7 @@ class UserStoryTests(unittest.TestCase):
     def test_every_scenario_has_a_label_and_explanation(self) -> None:
         for scenario_id, item in self.by_id.items():
             self.assertTrue(str(item["action_label"]).strip(), scenario_id)
-            self.assertGreater(
-                len(str(item["explanation"]).strip()), 20, scenario_id
-            )
+            self.assertGreater(len(str(item["explanation"]).strip()), 20, scenario_id)
 
     def test_unknown_tools_fall_back_to_experimental(self) -> None:
         for scenario_id in ("unknown_named_tool", "unknown_opaque_tool"):
@@ -61,9 +59,7 @@ class UserStoryTests(unittest.TestCase):
     ) -> None:
         item = self.by_id["synthetic_b4a"]
         self.assertEqual(item["outcome"], "ANALYSIS_CONTRADICTED")
-        self.assertEqual(
-            item["suggested_next_action"], "REVIEW_CONTRADICTION"
-        )
+        self.assertEqual(item["suggested_next_action"], "REVIEW_CONTRADICTION")
 
 
 if __name__ == "__main__":

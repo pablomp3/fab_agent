@@ -5,6 +5,7 @@ import unittest
 from pathlib import Path
 from unittest.mock import patch
 
+from src.agents.mapping_request import MappingEngine, create_mapping_engine
 from src.agents.model_transport import OpenAICompatibleTransport
 from src.agents.rca_engine import RCAEngine, create_rca_engine
 from src.core.sufficiency import PredicateConfig
@@ -16,6 +17,12 @@ class ModelConfigTests(unittest.TestCase):
         self.config_text = """\
 version: 1
 roles:
+  MAPPING:
+    model: fixture/default-model
+    model_env: MAPPING_MODEL_ID
+    api_key_env: TOKEN
+    base_url: https://models.example/v1/
+    timeout_seconds: 12
   SYNTHESIS:
     model: fixture/default-model
     model_env: MODEL_ID
@@ -74,6 +81,22 @@ roles:
 
         self.assertIsInstance(engine, RCAEngine)
         self.assertEqual(preflight.call_args.args[0].role, "SYNTHESIS")
+
+    def test_mapping_factory_uses_the_mapping_role_by_default(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            config_path = self.write_config(directory)
+            with patch.object(
+                OpenAICompatibleTransport,
+                "list_models",
+                return_value=("fixture/model-v1",),
+            ) as preflight:
+                engine = create_mapping_engine(
+                    config_path,
+                    {"MAPPING_MODEL_ID": "fixture/model-v1", "TOKEN": "test-token"},
+                )
+
+        self.assertIsInstance(engine, MappingEngine)
+        self.assertEqual(preflight.call_args.args[0].role, "MAPPING")
 
 
 if __name__ == "__main__":

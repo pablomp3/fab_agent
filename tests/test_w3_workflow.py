@@ -18,7 +18,9 @@ from src.core.sufficiency import PredicateConfig
 from src.core.types import EvidenceKind, Predicate, SignalSpec, SuggestedAction, Verdict
 
 ROOT = Path(__file__).resolve().parents[1]
-SYNTHETIC_CONFIG = ROOT / "config" / "sensor_relations" / "synthetic_twin.yaml"
+SYNTHETIC_CONFIG = (
+    ROOT / "benchmarks" / "evaluator" / "fixtures" / "v1" / "synthetic_twin.yaml"
+)
 
 _MINIMAL_CONFIG = """
 version: 1
@@ -96,22 +98,35 @@ class W3WorkflowTests(unittest.TestCase):
     def test_auxiliary_domain_configs_only_define_documented_relations(self) -> None:
         ion = load_relations(ROOT / "config/sensor_relations/ion_mill_phm18.yaml")
         self.assertEqual(
-            ion.groups["ion_source"],
-            (
+            set(ion.signal_labels),
+            {
+                "FLOWCOOLFLOWRATE",
+                "FLOWCOOLPRESSURE",
+                "IONGAUGEPRESSURE",
                 "ETCHBEAMVOLTAGE",
                 "ETCHBEAMCURRENT",
                 "ETCHSUPPRESSORVOLTAGE",
                 "ETCHSUPPRESSORCURRENT",
-            ),
+            },
         )
-        self.assertTrue(
-            all(signal.robust_z_threshold is None for signal in ion.signals)
+        ion_scenario = ion.scenarios["coolant_loop"]
+        self.assertEqual(
+            {spec.name for spec in ion_scenario.signals},
+            {"FLOWCOOLFLOWRATE", "FLOWCOOLPRESSURE"},
         )
-        self.assertEqual(ion.roles["beam_voltage"], ("ETCHBEAMVOLTAGE",))
-        self.assertEqual(ion.roles["grid_current"], ("ETCHBEAMCURRENT",))
+        self.assertEqual(len(ion_scenario.declared_signals or ()), 7)
+        assert ion_scenario.baseline is not None
+        self.assertEqual(ion_scenario.baseline.mode, "nominal_file")
         tep = load_relations(ROOT / "config/sensor_relations/tep_reactor.yaml")
-        self.assertEqual(tep.roles["cause"], ("XMEAS(1)", "XMV(3)"))
-        self.assertEqual(tep.roles["symptom"], ("XMEAS(7)",))
+        self.assertEqual(
+            {spec.name for spec in tep.signals},
+            {"XMEAS(1)", "XMV(3)", "XMEAS(7)"},
+        )
+        tep_scenario = tep.scenarios["feed_disturbance"]
+        self.assertEqual(
+            tep_scenario.predicate_config.primary_signals,
+            {"XMEAS(1)", "XMEAS(7)"},
+        )
 
     def test_yaml_loader_rejects_unknown_configuration_fields(self) -> None:
         with TemporaryDirectory() as temp_dir:
@@ -187,9 +202,7 @@ class W3WorkflowTests(unittest.TestCase):
         with TemporaryDirectory() as temp_dir:
             config = Path(temp_dir) / "supported.yaml"
             config.write_text(
-                _MINIMAL_CONFIG.format(
-                    extra="    supported_action: INSPECT_COMPONENT"
-                ),
+                _MINIMAL_CONFIG.format(extra="    supported_action: INSPECT_COMPONENT"),
                 encoding="utf-8",
             )
             loaded = load_relations(config)
@@ -204,9 +217,7 @@ class W3WorkflowTests(unittest.TestCase):
                 with TemporaryDirectory() as temp_dir:
                     config = Path(temp_dir) / "invalid.yaml"
                     config.write_text(
-                        _MINIMAL_CONFIG.format(
-                            extra=f"    supported_action: {value}"
-                        ),
+                        _MINIMAL_CONFIG.format(extra=f"    supported_action: {value}"),
                         encoding="utf-8",
                     )
                     with self.assertRaisesRegex(ValueError, "action"):

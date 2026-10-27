@@ -1,5 +1,13 @@
 version: 1
 roles:
+  MAPPING:
+    model: nvidia/Nemotron-3_5-Lightning
+    # The column mapper proposes an unverified draft only. It never authors a
+    # saved check or a verdict.
+    model_env: FABAGENT_MAPPING_MODEL
+    api_key_env: NEBIUS_API_KEY
+    base_url: https://api.tokenfactory.nebius.com/v1
+    timeout_seconds: 30
   SYNTHESIS:
     model: nvidia/Nemotron-3_5-Lightning
     # To switch to the larger synthesis model later, replace the model above.

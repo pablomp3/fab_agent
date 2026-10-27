@@ -1,20 +1,20 @@
 {
   "analysis_performed": true,
-  "anomaly_count": 2,
-  "any_supported": true,
+  "anomaly_count": 6,
+  "any_supported": false,
   "case_id": "phm2018_flowcool",
-  "confidence": "LOW",
+  "confidence": "INSUFFICIENT",
   "detail": null,
   "engineer_note_chars": 153,
-  "evidence_bytes": 380,
-  "evidence_count": 2,
+  "evidence_bytes": 1293,
+  "evidence_count": 7,
   "evidence_limit_bytes": 2048,
   "gate": "W5.5",
   "hypotheses": [
     {
       "hypothesis_class": "equipment_fault",
       "root_cause": "equipment_fault",
-      "status": "SUPPORTED",
+      "status": "INSUFFICIENT",
       "veto_reason": null
     }
   ],
@@ -23,15 +23,16 @@
   "mode": "offline",
   "model": "nvidia/Nemotron-3_5-Lightning",
   "model_called": true,
-  "outcome": "ANALYSIS_SUPPORTED",
+  "outcome": "ANALYSIS_INCONCLUSIVE",
   "payload_ok": true,
-  "request_bytes": 1840,
+  "request_bytes": 2941,
   "request_limit_bytes": 8192,
   "required_next_checks": [
-    "Have a human confirm the configured candidate: flowcool subsystem fault."
+    "The configured check passed, but large anomalies outside it prevent a bare confirmation.",
+    "Large anomalies outside the configured check: ETCHBEAMCURRENT, ETCHBEAMVOLTAGE, ETCHSUPPRESSORVOLTAGE, IONGAUGEPRESSURE. Review them before accepting the result."
   ],
   "selected_config": "ion_mill_phm18",
-  "selected_scenario": "flowcool",
+  "selected_scenario": "coolant_loop",
   "signal_coverage": 1.0,
-  "suggested_next_action": "INSPECT_COMPONENT"
+  "suggested_next_action": "ESCALATE_TO_ENGINEER"
 }

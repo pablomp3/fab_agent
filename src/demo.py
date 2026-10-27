@@ -15,7 +15,12 @@ from __future__ import annotations
 import json
 from collections.abc import Callable, Mapping
 from pathlib import Path
+from typing import cast
 
+from src.agents.differential_request import (
+    CAUSE_SCHEMA_NAME,
+    CHALLENGE_SCHEMA_NAME,
+)
 from src.agents.mapping_request import MappingEngine, create_mapping_engine
 from src.agents.model_transport import CompletionResponse
 from src.agents.rca_engine import create_rca_engine
@@ -26,6 +31,31 @@ from src.model_config import ModelRoute
 
 MAPPING_SCHEMA_NAME = "fabagent_mapping"
 MAX_ECHO_SIGNALS = 12
+
+
+def _offline_check(
+    checks: list[dict[str, object]], evidence: list[dict[str, object]]
+) -> dict[str, object] | None:
+    """Prefer the saved check whose required signals are actually unusual."""
+    anomaly_signals = {
+        str(item.get("signal"))
+        for item in evidence
+        if item.get("kind") == "SENSOR_ANOMALY" and item.get("signal")
+    }
+    for check in checks:
+        primary = check.get("must_be_unusual", [])
+        if isinstance(primary, list):
+            raw_primary = cast(list[object], primary)
+            names = [
+                signal for signal in raw_primary if isinstance(signal, str)
+            ]
+            if (
+                names
+                and len(names) == len(raw_primary)
+                and all(signal in anomaly_signals for signal in names)
+            ):
+                return check
+    return checks[0] if checks else None
 
 MODELS_CONFIG = Path(__file__).resolve().parents[1] / "config" / "models.yaml"
 
@@ -93,12 +123,83 @@ class EchoEvidenceTransport:
     ) -> CompletionResponse:
         self.calls += 1
         request = json.loads(body)
-        evidence = json.loads(request["messages"][1]["content"])["evidence"]
+        schema_block = request.get("response_format", {}).get("json_schema", {})
+        schema_name = schema_block.get("name")
+        user = json.loads(request["messages"][1]["content"])
+        evidence = user["evidence"]
         citations = [item["evidence_id"] for item in evidence]
-        signals = [
-            str(item["signal"]) for item in evidence if item.get("signal")
-        ]
-        schema = request["response_format"]["json_schema"]["schema"]
+        signals = [str(item["signal"]) for item in evidence if item.get("signal")]
+
+        if schema_name == CAUSE_SCHEMA_NAME:
+            claim, _, _, mechanism = _narrative_for(signals)
+            checks = user.get("checks", [])
+            selected_check = _offline_check(checks, evidence)
+            if selected_check is not None:
+                check_id = str(selected_check["id"])
+                title = f"{selected_check['label']} (offline cause)"
+            else:
+                check_id = "new"
+                title = claim
+            causes = (
+                [
+                    {
+                        "check": check_id,
+                        "title": title,
+                        "why": mechanism,
+                        "evidence": citations,
+                    }
+                ]
+                if citations
+                else []
+            )
+            return CompletionResponse(
+                json.dumps({"possible_causes": causes}), "stop"
+            )
+
+        if schema_name == CHALLENGE_SCHEMA_NAME:
+            check = user.get("check", {})
+            primary = {
+                str(signal)
+                for signal in check.get("must_be_unusual", [])
+                if isinstance(signal, str)
+            }
+            candidates = [
+                item
+                for item in evidence
+                if item.get("signal")
+                and str(item["signal"]) not in primary
+            ]
+            if not candidates:
+                return CompletionResponse(
+                    json.dumps(
+                        {
+                            "challenge": "No independent signal to challenge.",
+                            "evidence": ["EV_MISSING"],
+                            "expected": "unknown normal",
+                        }
+                    ),
+                    "stop",
+                )
+            anomalies = [
+                item for item in candidates if item.get("kind") == "SENSOR_ANOMALY"
+            ]
+            target = anomalies[0] if anomalies else candidates[0]
+            expected = f"{target['signal']} {'unusual' if anomalies else 'normal'}"
+            return CompletionResponse(
+                json.dumps(
+                    {
+                        "challenge": (
+                            "Offline check: the named independent signal should "
+                            "behave as predicted if the saved check is real."
+                        ),
+                        "evidence": [target["evidence_id"]],
+                        "expected": expected,
+                    }
+                ),
+                "stop",
+            )
+
+        schema = schema_block["schema"]
         classes = schema["properties"]["hypotheses"]["items"]["properties"][
             "hypothesis_class"
         ]["enum"]
@@ -153,9 +254,7 @@ class ExperimentalEchoTransport(EchoEvidenceTransport):
             return super().complete(route, api_key, body)
         self.calls += 1
         user = json.loads(request["messages"][1]["content"])
-        names = [str(item["column"]) for item in user["candidates"]][
-            :MAX_ECHO_SIGNALS
-        ]
+        names = [str(item["column"]) for item in user["candidates"]][:MAX_ECHO_SIGNALS]
         signals = [
             {
                 "column": name,

@@ -74,6 +74,17 @@ def _items(value: object, where: str) -> tuple[object, ...]:
     return tuple(cast(list[object], value))
 
 
+# Public aliases for the v2 loader. The implementations stay private here so
+# the v1 loader keeps one validation vocabulary.
+supported_action = _supported_action
+mapping = _mapping
+keys = _keys
+text = _text
+number = _number
+strings = _strings
+items = _items
+
+
 def _signal(value: object) -> SignalSpec:
     data = _mapping(value, "signal")
     _keys(data, {"name", "unit", "robust_z_threshold", "threshold_source"}, "signal")
@@ -247,9 +258,7 @@ def _scenario(value: object) -> ScenarioConfig:
         predicates,
         rules,
         candidate,
-        _supported_action(
-            data.get("supported_action"), "scenario.supported_action"
-        ),
+        _supported_action(data.get("supported_action"), "scenario.supported_action"),
     )
 
 
@@ -257,14 +266,22 @@ def load_relations(path: str | Path) -> LoadedRelations:
     """Load external YAML into immutable core config objects; reject unknown fields."""
     raw = cast(object, yaml.safe_load(Path(path).read_text(encoding="utf-8")))
     data = _mapping(raw, "configuration")
+    version = data.get("version")
+    # The product schema is v2. A missing version means the current schema;
+    # the v1 branch stays only for the internal benchmark fixtures.
+    if version is None or version == 2:
+        from src.config_loader_v2 import load_v2_relations
+
+        return load_v2_relations(data, base_dir=Path(path).resolve().parent)
+    if isinstance(version, bool) or not isinstance(version, int):
+        raise ValueError("tool model version must be 2 or omitted")
+    if version != 1:
+        raise ValueError("tool model version must be 2 or omitted")
     _keys(
         data,
         {"version", "name", "provenance", "signals", "groups", "roles", "scenarios"},
         "configuration",
     )
-    version = data.get("version")
-    if isinstance(version, bool) or not isinstance(version, int) or version != 1:
-        raise ValueError("configuration version must be 1")
     signals = tuple(
         _signal(item) for item in _items(data.get("signals", []), "signals")
     )

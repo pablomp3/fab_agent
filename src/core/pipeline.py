@@ -11,7 +11,15 @@ from src.core.sufficiency import (
     derive_predicates,
     evaluate_sufficiency,
 )
-from src.core.types import Evidence, Predicate, PredicateSet, SuggestedAction, Verdict
+from src.core.types import (
+    Coverage,
+    Evidence,
+    EvidenceKind,
+    Predicate,
+    PredicateSet,
+    SuggestedAction,
+    Verdict,
+)
 
 
 @dataclass(frozen=True, slots=True)
@@ -28,6 +36,69 @@ class CandidateAssessment:
     unresolved_evidence: tuple[str, ...]
     constraints: ConstraintResult
     suggested_next_action: SuggestedAction
+    coverage: Coverage
+
+
+def compute_coverage(
+    store: EvidenceStore,
+    predicate_config: PredicateConfig,
+    *,
+    large_z: float | None = None,
+    coverage_scope: frozenset[str] | None = None,
+) -> Coverage:
+    """Split declared channels into explained, unexplained, and large.
+
+    A channel is explained when it belongs to the configured check or scored
+    nominal. A channel with an anomaly outside the check is unexplained. The
+    caller supplies the product policy limit; core does not hardcode it.
+    ``coverage_scope`` lets a caller assess all saved checks together, so a
+    channel that another check explains is not treated as unexplained.
+    """
+    check_signals = (
+        coverage_scope
+        if coverage_scope is not None
+        else (
+            predicate_config.primary_signals
+            | predicate_config.corroboration_signals
+            | predicate_config.forbidden_anomaly_signals
+            | frozenset(
+                signal
+                for pair in predicate_config.actuator_pairs
+                for signal in pair
+            )
+            | frozenset(
+                signal
+                for pair in predicate_config.temporal_precedence_pairs
+                for signal in pair
+            )
+        )
+    )
+    anomaly_max: dict[str, float] = {}
+    nominal: set[str] = set()
+    for item in store:
+        if item.signal is None:
+            continue
+        if item.kind is EvidenceKind.SENSOR_ANOMALY and item.value is not None:
+            current = anomaly_max.get(item.signal)
+            if current is None or item.value > current:
+                anomaly_max[item.signal] = item.value
+        elif item.kind is EvidenceKind.SENSOR_NOMINAL:
+            nominal.add(item.signal)
+    unexplained = set(anomaly_max) - check_signals
+    unexplained_large: set[str] = set()
+    if large_z is not None:
+        unexplained_large = {
+            signal
+            for signal in unexplained
+            if (value := anomaly_max.get(signal)) is not None
+            and value >= large_z
+        }
+    explained = (check_signals & (set(anomaly_max) | nominal)) | nominal
+    return Coverage(
+        explained=tuple(sorted(explained)),
+        unexplained=tuple(sorted(unexplained)),
+        unexplained_large=tuple(sorted(unexplained_large)),
+    )
 
 
 def assess_candidate(
@@ -36,6 +107,9 @@ def assess_candidate(
     predicate_config: PredicateConfig,
     rules: Mapping[str, ConstraintRule],
     supported_action: SuggestedAction = SuggestedAction.ESCALATE_TO_ENGINEER,
+    *,
+    large_z: float | None = None,
+    coverage_scope: frozenset[str] | None = None,
 ) -> CandidateAssessment:
     resolved, unresolved = store.resolve_all(candidate.cited_evidence)
     rule = rules.get(candidate.hypothesis_class)
@@ -59,6 +133,12 @@ def assess_candidate(
         unresolved_evidence=unresolved,
         constraints=result,
         suggested_next_action=action,
+        coverage=compute_coverage(
+            store,
+            predicate_config,
+            large_z=large_z,
+            coverage_scope=coverage_scope,
+        ),
     )
 
 
@@ -68,6 +148,9 @@ def _assessment_predicates(
     return PredicateSet(
         has_primary_signal_anomaly=_assessment_flag(
             Predicate.HAS_PRIMARY_SIGNAL_ANOMALY, cited, global_evidence, rule
+        ),
+        has_all_primary_signals_anomaly=_assessment_flag(
+            Predicate.HAS_ALL_PRIMARY_SIGNALS_ANOMALY, cited, global_evidence, rule
         ),
         has_correlated_actuator_response=_assessment_flag(
             Predicate.HAS_CORRELATED_ACTUATOR_RESPONSE,

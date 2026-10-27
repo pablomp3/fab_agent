@@ -21,11 +21,11 @@ from src.schemas.models import RCAOutputModel
 _PHM_EXPORT = (
     "time,FLOWCOOLFLOWRATE,FLOWCOOLPRESSURE\n"
     "1,10.0,10.0\n"
-    "2,11.0,11.0\n"
-    "3,10.0,10.0\n"
-    "4,11.0,11.0\n"
-    "5,10.0,10.0\n"
-    "6,1000.0,11.0\n"
+    "2,10.4,10.3\n"
+    "3,9.8,9.9\n"
+    "4,10.2,10.1\n"
+    "5,9.9,9.8\n"
+    "6,1000.0,1000.0\n"
 )
 
 
@@ -74,16 +74,17 @@ class DossierTests(unittest.TestCase):
         self.assertTrue(result.model_called)
         self.assertIsNotNone(result.selection)
         assert result.selection is not None
-        self.assertEqual(result.selection.config_name, "ion_mill_phm18")
-        self.assertEqual(result.selection.scenario_name, "flowcool")
+        self.assertEqual(result.selection.config_name, "synthetic_flowcool")
+        self.assertEqual(result.selection.scenario_name, "coolant_loop")
         self.assertEqual(len(result.evidence), 2)
-        self.assertEqual(transport.calls, 1)
-        self.assertEqual(
-            result.output.suggested_next_action.value, "INSPECT_COMPONENT"
-        )
+        self.assertEqual(transport.calls, 2)  # cause finder + challenge
+        self.assertEqual(result.output.suggested_next_action.value, "INSPECT_COMPONENT")
         self.assertTrue(
             any(item.status is Verdict.SUPPORTED for item in result.output.hypotheses)
         )
+        self.assertEqual(result.output.headline_check, "coolant_loop")
+        self.assertTrue(result.output.differential)
+        self.assertIsNotNone(result.output.challenge)
         # Python owns the status: the cited anomaly resolves to SUPPORTED here.
         self.assertNotIn("HOLD_LOT", result.output.model_dump_json())
 
@@ -97,9 +98,7 @@ class DossierTests(unittest.TestCase):
                 engine_factory=offline_engine_factory(transport),
             )
 
-        self.assertEqual(
-            result.output.suggested_next_action.value, "INSPECT_COMPONENT"
-        )
+        self.assertEqual(result.output.suggested_next_action.value, "INSPECT_COMPONENT")
         self.assertTrue(
             any(item.status is Verdict.SUPPORTED for item in result.output.hypotheses)
         )

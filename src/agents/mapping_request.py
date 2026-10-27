@@ -35,7 +35,8 @@ MAPPING_SYSTEM_PROMPT = (
     "Propose candidate numeric signals worth scanning and candidate physical "
     "relationships between them. Units are unknown unless the column name makes "
     "one obvious; otherwise use null. This is an unverified mapping suggestion, "
-    "not a diagnosis. Return JSON per the schema; no extra fields."
+    "not a diagnosis, and it does not author a saved fault check. Return JSON "
+    "per the schema; no extra fields."
 )
 
 
@@ -330,9 +331,7 @@ class MappingEngine:
                 FailureCategory.SIZE,
             )
         try:
-            return MappingEnvelope.model_validate_json(
-                completion.content, strict=True
-            )
+            return MappingEnvelope.model_validate_json(completion.content, strict=True)
         except ValidationError as exc:
             raise ModelIntegrationError(
                 f"{self._route.role} mapping response failed validation",
@@ -349,7 +348,7 @@ def create_mapping_engine(
     config_path: str | Path = "config/models.yaml",
     environment: dict[str, str] | None = None,
     transport: ModelTransport | None = None,
-    role: str = "SYNTHESIS",
+    role: str = "MAPPING",
 ) -> MappingEngine:
     """Load the configured model route, key, and provider preflight."""
     route = load_model_route(config_path, role, environment)

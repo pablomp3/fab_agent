@@ -63,9 +63,7 @@ def default_cases() -> tuple[SuiteCase, ...]:
     return (
         SuiteCase(
             case_id="phm2018_flowcool",
-            csv_relative=(
-                "benchmarks/datasets/phm2018/sample/M02_DC_01_sample.csv"
-            ),
+            csv_relative=("benchmarks/datasets/phm2018/sample/M02_DC_01_sample.csv"),
             source="real_public_benchmark",
             note=PHM_NOTE,
             # The committed 1,000-row sample is centered on the fault, so the
@@ -270,8 +268,7 @@ def run_suite(
         "experimental_expectations_matched": sum(
             1 for item in experimental_matches if item
         ),
-        "all_expectations_matched": all(safe_matches)
-        and all(experimental_matches),
+        "all_expectations_matched": all(safe_matches) and all(experimental_matches),
     }
 
 

@@ -39,12 +39,10 @@ from src.core.duckdb_exec import extract_evidence
 from src.model_config import ModelRoute, load_api_key, load_model_route
 
 MODELS_CONFIG_NAME = "config/models.yaml"
-SYNTHETIC_CONFIG_NAME = "config/sensor_relations/synthetic_twin.yaml"
-POSITIVE_CONFIG_NAME = "config/sensor_relations/synthetic_twin_positive.yaml"
+SYNTHETIC_CONFIG_NAME = "benchmarks/evaluator/fixtures/v1/synthetic_twin.yaml"
+POSITIVE_CONFIG_NAME = "benchmarks/evaluator/fixtures/v1/synthetic_twin_positive.yaml"
 LIVE_RESULT_NAME = "benchmarks/evaluator/results/naive_llm_baseline.json"
-OFFLINE_RESULT_NAME = (
-    "benchmarks/evaluator/results/naive_llm_baseline_offline.json"
-)
+OFFLINE_RESULT_NAME = "benchmarks/evaluator/results/naive_llm_baseline_offline.json"
 MAX_TOKENS = 256
 
 # The deterministic gate's expected safety decision, not field truth:
@@ -161,9 +159,7 @@ def build_naive_request(
         "temperature": 0,
         "max_tokens": max_tokens,
     }
-    return json.dumps(body, ensure_ascii=False, separators=(",", ":")).encode(
-        "utf-8"
-    )
+    return json.dumps(body, ensure_ascii=False, separators=(",", ":")).encode("utf-8")
 
 
 def _action_category(text: str) -> str:
@@ -213,9 +209,7 @@ def run_baseline(
     )
     api_key = "offline-fixture-key" if offline else load_api_key(route, environment)
     active_transport: ModelTransport = (
-        transport
-        if transport is not None
-        else OpenAICompatibleTransport()
+        transport if transport is not None else OpenAICompatibleTransport()
     )
     if not offline and transport is None:
         available = active_transport.list_models(route, api_key)
@@ -226,9 +220,9 @@ def run_baseline(
             )
 
     cases: list[dict[str, object]] = []
-    for case_id, (config_path, expected_config_name, scenario_name) in (
-        _case_scenarios(project_root).items()
-    ):
+    for case_id, (config_path, expected_config_name, scenario_name) in _case_scenarios(
+        project_root
+    ).items():
         domain = load_relations(config_path)
         if domain.name != expected_config_name:
             raise ValueError(f"{case_id} config name changed unexpectedly")
@@ -262,9 +256,7 @@ def run_baseline(
             failure = "schema_validation"
 
         expected = _EXPECTED_IMMEDIATE_ACTION[case_id]
-        acted = (
-            answer.would_recommend_immediate_action if answer is not None else None
-        )
+        acted = answer.would_recommend_immediate_action if answer is not None else None
         cases.append(
             {
                 "case_id": case_id,

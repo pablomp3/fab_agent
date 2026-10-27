@@ -1,279 +1,269 @@
 # FabAgent
 
-**An evidence-gated root-cause copilot for semiconductor manufacturing.**
+**An evidence-gated troubleshooting copilot for semiconductor tools.**
 
-FabAgent reads a tool's sensor CSV, scopes it against a declarative tool
-configuration, turns the readings into evidence records, and gates a
-configuration-authored candidate through deterministic Python rules. An NVIDIA
-Nemotron model (served through Nebius Token Factory) writes an explanatory
-narrative and cites evidence IDs, but it does **not** decide the verdict or the
-action. A human always decides what to do next.
+FabAgent reads a tool’s sensor CSV, builds a normal reference, turns the readings
+into evidence records, and checks them against a short, engineer-editable tool
+model. It returns one of six plain results — **Fault Confirmed**, **Regular
+Behavior**, **Sensors Disagree**, **Data Incomplete**, **Needs Review**, or
+**Unknown Machine** — and one safe next step.
 
-The product entry point is `analyze_csv(csv, note)` in
-[`src/analyze.py`](src/analyze.py).
+The rule is simple:
+
+> **Nemotron proposes and challenges. Python checks. The engineer decides.**
+
+A human always confirms the action. FabAgent never changes a recipe and never
+holds a lot.
+
+> **Build status (2026-10-27):** the deterministic engine, UI, demo, offline
+> fallback, Auto column mapping, tool model, coverage, differential, and
+> challenge layer are implemented. The fair benchmark is being re-run with a
+> fixed protocol; no old 100%/0% number is used. See
+> [`docs/STATUS.md`](docs/STATUS.md).
+
+---
+
+## Why
+
+A fab tool streams hundreds of channels. When an alarm fires, a junior engineer
+has to decide whether a coolant drop is a real equipment fault, a failing sensor,
+a downstream symptom, or normal recipe behaviour. A naive LLM is fluent but it
+cannot prove coverage, cannot detect a contradiction deterministically, and may
+recommend a recipe change on a single noisy channel.
+
+FabAgent is built to be useful without being trusted with the decision:
+
+- **Evidence IDs, not prose.** Every finding has an ID; the model may cite only
+  those IDs; Python resolves every citation.
+- **A deterministic gate.** Coverage, missing channels, contradictions, and the
+  allowed action are computed in Python. A contradiction is absolute; it cannot
+  be outvoted.
+- **Fail-closed.** If the data is incomplete, the model fails, or the cause is
+  not configured, the result is **Needs Review** / **Data Incomplete**, not a
+  guess.
+- **No recipe or hold action.** The action set is small and typed.
+- **Bounded payload.** Raw telemetry stays in DuckDB; only a small statistical
+  summary crosses the network.
+
+---
+
+## Two ways to use it
+
+### Engineer-defined
+
+The engineer has a **tool model** — a short YAML file with the columns, the
+normal reference, and the fault checks. The run is deterministic:
 
 ```
-CSV ──> DuckDB triage ──> scoped evidence ──> configured candidate
-                                                   │
-                                                   ▼
-                              Nemotron narrative (not gated)
-                                                   │
-                                                   ▼
-                         Python predicates + vetoes + typed action
+CSV → match tool model → build normal reference → evidence → fault checks
+    → Python result → one safe next step
 ```
 
-## Try it in 30 seconds
+Nemotron adds the explanation and challenge; a temporary outage does not change
+the result or the action.
+
+### Auto (unknown export)
+
+No saved tool model? FabAgent does not guess a diagnosis. It does three bounded
+things:
+
+1. **Column mapper** — Nemotron proposes what each column means; Python validates
+   every proposal.
+2. **Cause finder** — Nemotron proposes possible causes from the evidence.
+3. **Python check** — each cause is mapped to a saved fault check. A cause
+   without a check is **Needs Review**, never a confirmed fault.
+
+The engineer reviews the guessed columns, saves the tool model, and re-runs. The
+next run is deterministic. **Start in Auto, promote to Engineer-defined.**
+
+---
+
+## The six results
+
+| Result | What it means | What to do |
+|---|---|---|
+| **Fault Confirmed** | The evidence supports the suspected fault. | Inspect the named part. |
+| **Regular Behavior** | Every checked signal is normal. | Keep monitoring. |
+| **Sensors Disagree** | One signal moved; the signals that should agree did not. | Check the sensor first. |
+| **Data Incomplete** | A required signal is missing. | Get the missing data. |
+| **Needs Review** | The data is not enough to confirm or rule out a cause. | Ask an engineer to review. |
+| **Unknown Machine** | The export does not match a saved tool model. | Review the guessed columns. |
+
+The main UI uses these words only. Internal enum names stay in the Audit tab.
+
+---
+
+## How it works
+
+```
+┌────────────────────────────────────────────────────────────────────┐
+│ UI: six results, differential table, audit tab                     │
+└───────────────────────────▲────────────────────────────────────────┘
+                            │ typed result + plain-language mapping
+┌───────────────────────────┴────────────────────────────────────────┐
+│ Nemotron: column mapper · cause finder · challenge check · explain │
+│ bounded payload, schema-validated, never decides                    │
+└───────────────────────────▲────────────────────────────────────────┘
+                            │ evidence IDs + saved tool-model checks
+┌───────────────────────────┴────────────────────────────────────────┐
+│ Python + DuckDB: baseline → evidence → coverage → checks → gate    │
+│ no model, no network, no benchmark IDs                             │
+└────────────────────────────────────────────────────────────────────┘
+```
+
+- **Baseline:** `lead_in`, `nominal_file`, or per-recipe-step (advanced). A
+  global median/MAD can absorb a fault into “normal”.
+- **Evidence:** one record per declared signal: anomaly, nominal, or missing.
+- **Coverage:** unexplained large anomalies prevent a bare **Fault Confirmed**.
+- **Differential:** all saved checks are shown, not just one scenario.
+- **Challenge:** the model proposes a disconfirming test; Python evaluates it.
+  The challenge can only downgrade a result.
+
+---
+
+## Quickstart
+
+Requires Python 3.11+ and [`uv`](https://docs.astral.sh/uv/).
 
 ```sh
 uv sync
-PYTHONPATH=. .venv/bin/streamlit run src/ui/app.py
+cp .env.example .env          # add NEBIUS_API_KEY and TAVILY_API_KEY
+.venv/bin/streamlit run src/ui/app.py
 ```
 
-The dashboard is a guided five-step workflow. Its sidebar pages explain what
-FabAgent is, how Nemotron and Tavily are used, and how the gate compares with a
-naive LLM. The run page previews the first rows, describes the important
-columns and YAML signals, and shows a live checklist of each stage. It ships
-with prepared datasets across public and synthetic data:
+Open <http://localhost:8501>. Use **Demo mode** to run without a key.
 
-| Dataset | What it shows |
+Environment:
+
+| Variable | Used for |
 |---|---|
-| PHM 2018 coolant loop | Public fault window → `SUPPORTED`, action `INSPECT_COMPONENT` |
-| PHM 2018 nominal | Public nominal window → `INSUFFICIENT`, action `COLLECT_MORE_DATA` |
-| TEP IDV 6 feed | Public feed disturbance → `SUPPORTED`, action `ESCALATE_TO_ENGINEER` |
-| TEP IDV 3 | Public unmodeled disturbance → `INSUFFICIENT`, action `COLLECT_MORE_DATA` |
-| Synthetic coolant loop | Both configured channels move → `SUPPORTED` |
-| Synthetic coolant loop nominal | Configured channels are quiet → `INSUFFICIENT` |
-| Synthetic sensor contradiction | Corroborating channels are nominal, so the Python veto wins over the model's arc story |
-| Unknown tool dataset | No schema matches → experimental mapping, unverified evidence, reviewable draft config |
+| `NEBIUS_API_KEY` | Nemotron calls through Nebius Token Factory |
+| `TAVILY_API_KEY` | Optional public troubleshooting leads |
+| `FABAGENT_MODEL_CONFIG` | Optional path to `config/models.yaml` |
 
-You can also upload your own CSV or generate a seeded synthetic export. The
-generator writes a nominal lead-in plus an optional drift; it never writes a
-ground-truth label. Every run still goes through the real triage, DuckDB scan,
-model boundary, citation resolver, predicates, and Python gate.
+Keys are server-side only. They are never sent to the browser and never logged.
 
-When the server has `NEBIUS_API_KEY`, the dashboard defaults to live Nemotron.
-When it does not, the deterministic offline transport exercises the same gate.
-The browser never receives either key. Optional Tavily references appear for
-inconclusive or experimental runs when the server has `TAVILY_API_KEY`; they
-never change the verdict.
+### Run the tests
 
 ```sh
-export NEBIUS_API_KEY          # server environment or secret manager
-export TAVILY_API_KEY          # optional; enables external references
-PYTHONPATH=. .venv/bin/streamlit run src/ui/app.py
-```
-
-The app never displays, logs, or stores the keys.
-
-## The core contract
-
-1. **The configuration owns the candidate.** Each scenario declares
-   `candidate.claim`, `candidate.hypothesis_class`, `candidate.cited_signals`,
-   `candidate.root_cause`, and a `supported_action`. The model cannot rename the
-   claim or choose the action.
-2. **Python owns the verdict.** Every configured signal is resolved to an
-   evidence record. Boolean predicates are derived from that evidence. A
-   configured channel with no evidence forces `INSUFFICIENT`; a hard
-   contradiction forces `VETOED`.
-3. **The model owns the narrative, not the conclusion.** The model's proposal is
-   stored as `model_narrative` and shown under “not gated.” If the model call
-   fails or returns invalid JSON, the deterministic gate still runs and records
-   the sanitized failure category as a required next check.
-4. **Actions are typed and safe.** There is no free-form action field and no
-   recipe-change action. `HOLD_LOT` is deliberately not offered. Supported runs
-   use the scenario's declared `INSPECT_COMPONENT`, `CONTINUE_MONITORING`, or
-   `ESCALATE_TO_ENGINEER`; every other route fails closed.
-5. **Unknown stays unknown.** Units and thresholds without an authoritative
-   source remain `null`/`NOT_EVALUATED`; the system never invents a number.
-
-## Quickstart for developers
-
-```sh
-uv sync
-
-# Unit tests, linter, and strict type-checker
-.venv/bin/python -m unittest discover -s tests
+.venv/bin/python -m unittest discover -s tests -q
 .venv/bin/ruff check .
 .venv/bin/basedpyright
-
-# Deterministic gates (no provider key)
 PYTHONPATH=. .venv/bin/python benchmarks/evaluator/synthetic_abstention_runner.py
 PYTHONPATH=. .venv/bin/python -m benchmarks.evaluator.dossier_e2e_runner --offline
 PYTHONPATH=. .venv/bin/python -m benchmarks.evaluator.experimental_e2e_runner
 PYTHONPATH=. .venv/bin/python -m benchmarks.evaluator.e2e_suite_runner
 ```
 
-The live positive control and the live end-to-end walkthrough need
-`NEBIUS_API_KEY`:
+---
 
-```sh
-PYTHONPATH=. .venv/bin/python -m benchmarks.evaluator.llm_positive_control
-PYTHONPATH=. .venv/bin/python benchmarks/evaluator/user_story_runner.py --live
-```
+## Tool model
 
-## How a run flows
-
-1. **Triage.** `src/triage.py` matches CSV headers (and the optional engineer
-   note) against runnable scenarios in `config/sensor_relations/*.yaml`.
-2. **Evidence.** `src/core/duckdb_exec.py` scans only the selected scenario's
-   channels with DuckDB and computes an approximate robust MAD z-score per
-   channel. It emits one bounded evidence record per channel: anomaly, nominal,
-   missing, or not evaluated.
-3. **Gate.** `src/agents/rca_engine.py` sends a ≤2 KB evidence summary and the
-   configured candidate to Nemotron. The model returns a strict-JSON narrative
-   with evidence IDs. Python resolves the configured citations, derives boolean
-   predicates, applies the scenario's `require_all` / `forbid_any` /
-   `veto_if_any` rule, and chooses the typed action.
-4. **Present.** The Streamlit dashboard shows the five stages explicitly:
-   triage, scope, model call, Python verdict, and next step. The model narrative
-   is a separate expander. For inconclusive or experimental runs, optional
-   Tavily references are shown separately and never enter the gate.
-
-If no schema matches, `analyze_csv` automatically falls back to the
-experimental mapping (`src/experimental.py`): it profiles columns, asks the
-model for a bounded mapping, validates every column in Python, scans the
-validated signals with a documented default threshold, marks all evidence
-`unverified_mapping`, and offers a draft YAML config. Saving the draft turns the
-next run into the deterministic safe path. It is data triage, not a physical
-root-cause claim.
-
-## Configuration example
+A tool model is one short YAML file. It answers three questions: which columns
+matter, what normal looks like, and which patterns count as a fault.
 
 ```yaml
-version: 1
-name: ion_mill_phm18
-provenance: "PHM 2018 documented signal groups"
+tool:
+  name: ion_mill_m02
+  label: Ion Mill M02
+baseline:
+  mode: lead_in
+  rows: 200
 signals:
-  - {name: FLOWCOOLFLOWRATE, unit: null, robust_z_threshold: null}
-  - {name: FLOWCOOLPRESSURE, unit: null, robust_z_threshold: null}
-scenarios:
-  flowcool:
-    signals:
-      - {name: FLOWCOOLFLOWRATE, unit: null, robust_z_threshold: 3.5, threshold_source: "standard_robust_mad_multiplier=3.5"}
-      - {name: FLOWCOOLPRESSURE, unit: null, robust_z_threshold: 3.5, threshold_source: "standard_robust_mad_multiplier=3.5"}
-    predicates:
-      primary_signals: [FLOWCOOLFLOWRATE, FLOWCOOLPRESSURE]
-    rules:
-      equipment_fault:
-        require_all: [has_primary_signal_anomaly]
-        forbid_any: [has_missing_required_evidence]
-    candidate:
-      claim: flowcool subsystem fault
-      hypothesis_class: equipment_fault
-      cited_signals: [FLOWCOOLFLOWRATE, FLOWCOOLPRESSURE]
-      root_cause: equipment_fault
-      failure_mode: Flowcool subsystem fault; confirm the specific mode during inspection.
-      mechanism: The configured relationship links coolant flow and pressure; the physical mechanism is not asserted.
-    supported_action: INSPECT_COMPONENT
+  - {name: FLOWCOOLFLOWRATE, label: Coolant flow, unit: null, alert_at: 3.5}
+  - {name: FLOWCOOLPRESSURE, label: Coolant pressure, unit: null, alert_at: 3.5}
+  - {name: IONGAUGEPRESSURE, label: Chamber pressure, unit: null, alert_at: 3.5}
+checks:
+  - id: coolant_leak
+    label: Coolant loop fault
+    kind: equipment_fault
+    must_be_unusual:
+      - {signal: FLOWCOOLFLOWRATE, direction: any}
+      - {signal: FLOWCOOLPRESSURE, direction: any}
+    must_stay_normal: [IONGAUGEPRESSURE]
+    action: INSPECT_COMPONENT
+    advice: Inspect the coolant loop before changing the recipe.
 ```
 
-The loader rejects unknown keys and invalid actions. `supported_action` is
-limited to `INSPECT_COMPONENT`, `CONTINUE_MONITORING`, or
-`ESCALATE_TO_ENGINEER`; a data-quality action cannot be declared as a supported
-outcome.
+The full guide, including the TEP and sensor-conflict examples, is
+[`docs/YAML_GUIDE.md`](docs/YAML_GUIDE.md). The product has one tool-model
+format; the raw YAML is an advanced engineering surface, not a first-run step.
 
-## Validation (measured, with limits)
+---
 
-The repository records receipts for every deterministic gate. These are
-engineering checks on public or synthetic substrates, **not** field validation
-and **not** a broad accuracy claim.
+## Demo
 
-| Gate | What it checks | Receipt |
-|---|---|---|
-| W2 | A 30 GB stress input becomes a 370-byte evidence payload | `benchmarks/evaluator/results/w2_payload_check.json` |
-| W3 | B4a–B4d abstain or veto with **zero LLM calls** | `benchmarks/evaluator/results/w3_adversarial_check.json` |
-| W4 | B4e positive control reaches a Python-gated result | `benchmarks/evaluator/results/w4_positive_check_offline.json` |
-| W5 | PHM 2018 flowcool and TEP feed cases on measured data | `benchmarks/evaluator/results/w5_real_data_check.json` |
-| W5.5 | Engineer flow, payload scaling, and the safe path | `benchmarks/evaluator/results/e2e_phm_check_offline.json` |
-| Experimental | Unknown export → validated mapping → draft config | `benchmarks/evaluator/results/experimental_phm_check_offline.json` |
+The dashboard ships eight prepared demo inputs and can generate a seeded export:
 
-Measured highlights:
+- a supported coolant fault;
+- a nominal run;
+- a sensor conflict;
+- an unknown machine.
 
-- **W3:** all four adversarial cases pass with `llm_calls=0`. B4a is `VETOED`
-  because the corroborating channels contradict the primary anomaly; B4b–B4d
-  abstain rather than over-claim.
-- **W4:** the B4e positive control is `SUPPORTED` offline. The live path is
-  non-deterministic; a recorded live stability run measured 4/5 supported
-  proposals **before** the candidate-alignment change. That artifact measures
-  proposal availability, not the current gate's determinism.
-- **W5:** the scoped PHM 2018 flowcool candidate is `SUPPORTED /
-  INSPECT_COMPONENT`; TEP IDV 1/2/6 are supported and the other configured IDVs
-  abstain. This is one subsystem and one cause/symptom relationship, not broad
-  accuracy.
-- **Experimental:** the unknown-export path validates every column in Python and
-  marks every evidence record `unverified_mapping`; it never claims a physical
-  root cause.
+The demo runs in offline mode with no key. The result still comes from Python;
+the offline transport only replaces the model calls.
 
-The single naive-LLM baseline harness is
-[`benchmarks/evaluator/naive_llm_baseline.py`](benchmarks/evaluator/naive_llm_baseline.py).
-It was run live on 2026-10-24: **2/5 safe decisions**. The unconstrained model
-recommended immediate action on B4b, B4c, and B4d, where the deterministic gate
-abstains. The artifact is `results/naive_llm_baseline.json`; raw model text is
-not stored. Its offline mode is only a harness check with an over-claiming
-fixture (`results/naive_llm_baseline_offline.json`), **not** a measured LLM
-result. This is one baseline, not an ablation study.
+---
 
-The full dataset defense for judges is in
-[`dataset_validation_defense.md`](dataset_validation_defense.md). The open
-adoption limits are in [`KNOWN_CHALLENGES.md`](KNOWN_CHALLENGES.md), and the
-route/action reference is in [`SUGGESTED_ACTIONS.md`](SUGGESTED_ACTIONS.md).
+## Benchmark
 
-## Repository map
+FabAgent is compared with raw Gemini, ChatGPT, and Nemotron-only on the same
+neutral evidence. The benchmark measures **safe decisions**, not “decisiveness”:
 
-```
-fab_agent/
-├── src/
-│   ├── core/                 # deterministic engine: no LLM, no YAML, no network
-│   │   ├── duckdb_exec.py    # bounded MAD scan -> evidence records
-│   │   ├── sufficiency.py    # evidence -> boolean predicates
-│   │   ├── constraints.py    # require_all / forbid_any / veto_if_any
-│   │   ├── safety_gate.py    # typed, fail-closed action
-│   │   └── pipeline.py       # assess one candidate
-│   ├── agents/               # the model boundary: proposes narrative only
-│   ├── ui/                   # Streamlit dashboard and pure view helpers
-│   ├── tools/                # optional bounded Tavily search
-│   ├── config_loader.py      # strict YAML -> immutable config objects
-│   ├── config_types.py       # CandidateConfig / ScenarioConfig
-│   ├── triage.py             # CSV headers + note -> scenario
-│   ├── dossier.py            # safe path
-│   ├── experimental.py       # unverified mapping fallback
-│   ├── analyze.py            # product entry point
-│   ├── demo.py               # key-free deterministic demo transport
-│   ├── demo_catalog.py       # prepared public/synthetic demo inputs
-│   └── demo_data.py          # seeded synthetic CSV generator
-├── config/
-│   ├── models.yaml           # SYNTHESIS route (Nebius / Nemotron)
-│   └── sensor_relations/     # tool schemas and candidates
-├── samples/                  # synthetic demo CSVs
-├── benchmarks/               # W2-W5.5 evaluators and receipts
-├── tests/                    # 129 unit tests
-└── docs: README, HOW_IT_WORKS, KNOWN_CHALLENGES, SUGGESTED_ACTIONS
-```
+- unsafe action rate;
+- correct cause rate;
+- appropriate abstention;
+- false-alarm rate;
+- evidence accuracy.
 
-`src/core/` is deliberately generic: it imports only the standard library and
-DuckDB. Tool physics and sensor relationships live in YAML, parsed outside
-`src/core/`. Benchmark IDs are banned from `src/core/`.
+The protocol, cases, rubric, and fairness rules are in
+[`docs/EVALUATION.md`](docs/EVALUATION.md). On the fixed eight-case evidence set
+(2026-10-27), the deterministic gate reference made **0/8 unsafe actions**; the
+live Nemotron-only run made **4/8 unsafe actions** and false-alarmed on the
+nominal case. The naive prompt does not receive the saved tool-model checks, so
+this is a workflow comparison, not a pure gate ablation. The aggregate is in
+[`benchmarks/evaluator/results/naive_llm/2026-10-27/summary.json`](benchmarks/evaluator/results/naive_llm/2026-10-27/summary.json).
+The old 100%/0% table was based on prompts that leaked the answer and is not
+used.
 
-## Data boundary and limitations
+---
 
-- The Synthetic Fab Twin is a controlled fixture. Recovering its injected cause
-  does not establish real-world field truth.
-- Public datasets provide observations within the limits described in
-  [`KNOWN_CHALLENGES.md`](KNOWN_CHALLENGES.md),
-  [`anti_goals.md`](anti_goals.md), and
-  [`dataset_validation_defense.md`](dataset_validation_defense.md). WM-811K
-  spatial patterns are not causes.
-- Raw telemetry stays in the local analysis path. Model requests contain only a
-  bounded structured evidence payload; an oversized request raises
-  `PayloadTooLarge` instead of being truncated or sent.
-- Optional Tavily search is implemented for external references only; it is not
-  evidence and does not enter the gate. A full RAG/manual index is not
-  implemented. Wafer-map spatial predicates need calibrated feature bounds. The
-  live naive-LLM baseline is a single 5-case safety check (2/5 safe), not a broad
-  model comparison or an ablation study.
-- The live model is non-deterministic. The gate is deterministic; the narrative
-  may be absent.
+## What FabAgent is not
+
+- Not autonomous RCA. A human confirms every action.
+- Not field validation. Public and synthetic datasets test the reasoning pattern,
+  not a modern fab’s physics.
+- Not a recipe controller. It never changes a recipe and never holds a lot.
+- Not a replacement for a process engineer. It is a first-pass triage and an
+  onboarding aid.
+
+---
+
+## Docs
+
+| Doc | What it covers |
+|---|---|
+| [`docs/PRODUCT.md`](docs/PRODUCT.md) | Product definition and the judge story |
+| [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) | Current and hybrid architecture, contracts |
+| [`docs/UI_VOCABULARY.md`](docs/UI_VOCABULARY.md) | The six words and copy rules |
+| [`docs/YAML_GUIDE.md`](docs/YAML_GUIDE.md) | Tool model |
+| [`docs/EVALUATION.md`](docs/EVALUATION.md) | Fair benchmark vs Gemini/ChatGPT |
+| [`docs/DATASETS.md`](docs/DATASETS.md) | PHM/TEP/synthetic limits |
+| [`docs/STATUS.md`](docs/STATUS.md) | Verified state and known issues |
+| [`docs/HYBRID_IMPLEMENTATION.md`](docs/HYBRID_IMPLEMENTATION.md) | Implementation entrypoint |
+| [`docs/SUBMISSION.md`](docs/SUBMISSION.md) | Hackathon checklist |
+
+---
+
+## Built with
+
+- **NVIDIA Nemotron** through **Nebius Token Factory** — mapping, cause finding,
+  challenge, explanation.
+- **Nebius AI Cloud** — deployment target.
+- **Tavily** — bounded public troubleshooting leads; never evidence.
+- **DuckDB** — local, bounded telemetry analysis.
+- **Streamlit** — the engineer UI.
 
 ## License
 
-Apache-2.0. See [`LICENSE`](LICENSE).
+Apache 2.0. See [`LICENSE`](LICENSE).

@@ -8,10 +8,13 @@ from benchmarks.evaluator.echo_transport import (
     EchoEvidenceTransport,
     offline_engine_factory,
 )
+from src.agents.differential_request import (
+    CheckPrompt,
+    build_cause_request,
+)
 from src.agents.proposal_request import (
     MAX_EVIDENCE_BYTES,
     MAX_REQUEST_BYTES,
-    build_proposal_request,
     evidence_summary_bytes,
 )
 from src.config_loader import load_relations
@@ -51,7 +54,7 @@ def _hypotheses(output: RCAOutputModel) -> list[dict[str, object]]:
 
 def _measure_request(
     evidence: tuple[Evidence, ...],
-    classes: tuple[str, ...],
+    checks: tuple[CheckPrompt, ...],
     context: str,
     max_tokens: int,
 ) -> tuple[int, int | None, bool]:
@@ -59,8 +62,8 @@ def _measure_request(
     model = load_model_route(models_config, "SYNTHESIS", {}).model
     evidence_bytes = evidence_summary_bytes(evidence)
     try:
-        body = build_proposal_request(
-            model, evidence, classes, max_tokens, context=context
+        body = build_cause_request(
+            model, evidence, checks, max_tokens, context=context
         )
     except PayloadTooLarge as exc:
         if exc.limit_bytes == MAX_EVIDENCE_BYTES:
@@ -70,10 +73,19 @@ def _measure_request(
     return evidence_bytes, len(body), ok
 
 
-def _scenario_classes(selection: ProfileSelection) -> tuple[str, ...]:
+def _scenario_checks(selection: ProfileSelection) -> tuple[CheckPrompt, ...]:
     relations = load_relations(selection.config_path)
-    scenario = relations.scenarios[selection.scenario_name]
-    return tuple(sorted(scenario.rules))
+    return tuple(
+        CheckPrompt(
+            check_id=check_id,
+            label=scenario.candidate.claim,
+            primary=tuple(sorted(scenario.predicate_config.primary_signals)),
+            stay_normal=tuple(
+                sorted(scenario.predicate_config.forbidden_anomaly_signals)
+            ),
+        )
+        for check_id, scenario in relations.scenarios.items()
+    )
 
 
 def run_e2e(
@@ -90,9 +102,7 @@ def run_e2e(
         root / csv_relative, ENGINEER_NOTE, max_tokens=max_tokens, **kwargs
     )
     anomalies = [
-        item
-        for item in result.evidence
-        if item.kind is EvidenceKind.SENSOR_ANOMALY
+        item for item in result.evidence if item.kind is EvidenceKind.SENSOR_ANOMALY
     ]
     request_bytes: int | None = None
     evidence_bytes = 0
@@ -100,7 +110,7 @@ def run_e2e(
     if result.selection is not None:
         evidence_bytes, request_bytes, payload_ok = _measure_request(
             result.evidence,
-            _scenario_classes(result.selection),
+            _scenario_checks(result.selection),
             result.engineer_note,
             max_tokens,
         )
@@ -151,8 +161,7 @@ def _scaling_evidence(channels: int) -> tuple[Evidence, ...]:
             provenance=f"scaling_probe rows 1-1000 ({1000} observations)",
             computed_by="scaling_probe@v1",
             summary=(
-                f"channel_{index:03d}: approximate maximum robust MAD "
-                "z-score 0.42."
+                f"channel_{index:03d}: approximate maximum robust MAD z-score 0.42."
             ),
             window_basis="row:scaling_probe",
         )
@@ -165,7 +174,14 @@ def run_scaling(max_tokens: int = 256) -> dict[str, object]:
     for channels in (1, 2, 4, 6, 8, 10, 12, 14, 16, 20):
         evidence_bytes, request_bytes, payload_ok = _measure_request(
             _scaling_evidence(channels),
-            ("equipment_fault",),
+            (
+                CheckPrompt(
+                    check_id="scale",
+                    label="Scaling probe",
+                    primary=("channel_000",),
+                    stay_normal=(),
+                ),
+            ),
             "short engineer note",
             max_tokens,
         )

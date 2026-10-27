@@ -234,7 +234,7 @@
       "verdict": "INSUFFICIENT"
     }
   ],
-  "configuration": "/home/pablo/code/nvidia/fab_agent/config/sensor_relations/synthetic_twin.yaml",
+  "configuration": "/home/pablo/code/nvidia/fab_agent/benchmarks/evaluator/fixtures/v1/synthetic_twin.yaml",
   "gate": "W3",
   "llm_calls": 0,
   "passed": true

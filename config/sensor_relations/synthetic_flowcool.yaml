@@ -1,0 +1,20 @@
+tool:
+  name: synthetic_flowcool
+  label: Synthetic flowcool loop
+  description: "Synthetic two-channel coolant demo. Values are not field calibration."
+baseline:
+  mode: lead_in
+  rows: 5
+signals:
+  - {name: FLOWCOOLFLOWRATE, label: Coolant flow, unit: null, alert_at: 3.5}
+  - {name: FLOWCOOLPRESSURE, label: Coolant pressure, unit: null, alert_at: 3.5}
+checks:
+  - id: coolant_loop
+    label: Coolant loop fault
+    kind: equipment_fault
+    must_be_unusual:
+      - {signal: FLOWCOOLFLOWRATE, direction: any}
+      - {signal: FLOWCOOLPRESSURE, direction: any}
+    must_stay_normal: []
+    action: INSPECT_COMPONENT
+    advice: "Inspect the coolant loop and its sensors. Do not adjust the recipe."

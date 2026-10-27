@@ -130,9 +130,7 @@ class TavilyClient:
         return tuple(references)
 
 
-def build_tavily_query(
-    evidence: tuple[Evidence, ...], configured_claim: str
-) -> str:
+def build_tavily_query(evidence: tuple[Evidence, ...], configured_claim: str) -> str:
     """Build a bounded query from anomaly signal names and a configured claim.
 
     Raw values, units, windows, and the engineer note are intentionally

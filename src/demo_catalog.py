@@ -33,82 +33,83 @@ class DemoCase:
 
 
 _PHM_COLUMNS = (
-    ("time", "Row index in this committed public-data slice."),
-    (
-        "FLOWCOOLFLOWRATE",
-        "Coolant flow rate. A sustained drop can indicate a cooling-loop problem.",
-    ),
-    (
-        "FLOWCOOLPRESSURE",
-        "Coolant pressure. The configured relationship expects it to move with flow.",
-    ),
-    ("IONGAUGEPRESSURE", "Ion-gauge pressure; a chamber-condition signal."),
-    ("ETCHBEAMVOLTAGE", "Etch beam voltage; an ion-source signal."),
-    ("ETCHBEAMCURRENT", "Etch beam current; an ion-source signal."),
+    ("time", "Row index"),
+    ("Tool", "Machine ID"),
+    ("stage", "Process stage"),
+    ("Lot", "Wafer lot ID"),
+    ("runnum", "Run sequence"),
+    ("recipe", "Recipe number"),
+    ("recipe_step", "Step number"),
+    ("IONGAUGEPRESSURE", "Chamber pressure"),
+    ("ETCHBEAMVOLTAGE", "Beam voltage"),
+    ("ETCHBEAMCURRENT", "Beam current"),
+    ("ETCHSUPPRESSORVOLTAGE", "Suppressor voltage"),
+    ("ETCHSUPPRESSORCURRENT", "Suppressor current"),
+    ("FLOWCOOLFLOWRATE", "Coolant flow"),
+    ("FLOWCOOLPRESSURE", "Coolant pressure"),
+    ("ETCHGASCHANNEL1READBACK", "Gas 1 flow"),
+    ("ETCHPBNGASREADBACK", "Purge gas flow"),
+    ("FIXTURETILTANGLE", "Tilt angle"),
+    ("ROTATIONSPEED", "Rotation speed"),
+    ("ACTUALROTATIONANGLE", "Rotation angle"),
+    ("FIXTURESHUTTERPOSITION", "Shutter state"),
+    ("ETCHSOURCEUSAGE", "Source usage"),
+    ("ETCHAUXSOURCETIMER", "Auxiliary timer"),
+    ("ETCHAUX2SOURCETIMER", "Auxiliary timer 2"),
+    ("ACTUALSTEPDURATION", "Step duration"),
+)
+
+_SYNTHETIC_FLOWCOOL_COLUMNS = (
+    ("time", "Row index"),
+    ("FLOWCOOLFLOWRATE", "Coolant flow"),
+    ("FLOWCOOLPRESSURE", "Coolant pressure"),
 )
 
 _PHM_SIGNALS = (
-    (
-        "FLOWCOOLFLOWRATE",
-        "Primary coolant channel. It must be anomalous for the configured candidate.",
-    ),
-    (
-        "FLOWCOOLPRESSURE",
-        "Second primary coolant channel. Both coolant channels must move.",
-    ),
+    ("FLOWCOOLFLOWRATE", "Coolant flow channel"),
+    ("FLOWCOOLPRESSURE", "Coolant pressure channel"),
 )
 
 _TEP_COLUMNS = (
-    ("time", "Row index in this committed public-data slice."),
-    (
-        "XMEAS(1)",
-        "A feed flow (kscmh). A configured cause channel for the "
-        "feed-system candidate.",
-    ),
-    (
-        "XMV(3)",
-        "A feed valve position (%). A configured cause channel for the "
-        "feed-system candidate.",
-    ),
-    (
-        "XMEAS(7)",
-        "Reactor pressure (kPa). A symptom channel used only as corroboration.",
-    ),
+    ("time", "Row index"),
+    ("XMEAS(1)", "Feed flow"),
+    ("XMV(3)", "Feed valve"),
+    ("XMEAS(7)", "Reactor pressure"),
 )
 
 _TEP_SIGNALS = (
-    ("XMEAS(1)", "Primary cause channel. It must be anomalous."),
-    ("XMV(3)", "Primary cause channel. It must be anomalous."),
-    ("XMEAS(7)", "Corroboration only; it cannot substitute for the cause channels."),
+    ("XMEAS(1)", "Primary feed flow"),
+    ("XMV(3)", "Primary feed valve"),
+    ("XMEAS(7)", "Corroborating reactor pressure"),
 )
 
 _RF_COLUMNS = (
-    ("time", "Row index in the synthetic export."),
-    ("sensor_17", "The configured RF reflectometer signal. It moves in this sample."),
-    ("impedance", "A corroborating electrical channel. It stays quiet here."),
-    ("thermal", "A corroborating thermal channel. It stays quiet here."),
-    ("pressure", "A corroborating pressure channel. It stays quiet here."),
+    ("time", "Row index"),
+    ("sensor_17", "RF power"),
+    ("impedance", "Chamber impedance"),
+    ("thermal", "Chamber temperature"),
+    ("pressure", "Chamber pressure"),
 )
 
 _RF_SIGNALS = (
-    ("sensor_17", "Primary RF channel. Anomalous in this sample."),
-    ("impedance", "Corroborating channel. Quiet in this sample."),
-    ("thermal", "Corroborating channel. Quiet in this sample."),
-    ("pressure", "Corroborating channel. Quiet in this sample."),
+    ("sensor_17", "Primary RF power"),
+    ("impedance", "Backup impedance"),
+    ("thermal", "Backup temperature"),
+    ("pressure", "Backup pressure"),
 )
 
 _UNKNOWN_COLUMNS = (
-    ("time", "Row index in the synthetic export."),
-    ("chamber_temp", "Chamber temperature; no configured meaning yet."),
-    ("chamber_pressure", "Chamber pressure; no configured meaning yet."),
-    ("rf_power", "RF power; no configured meaning yet."),
+    ("time", "Row index"),
+    ("chamber_temp", "Chamber temperature"),
+    ("chamber_pressure", "Chamber pressure"),
+    ("rf_power", "RF power"),
 )
 
 
 _DEMOS: tuple[DemoCase, ...] = (
     DemoCase(
         key="phm_flowcool_supported",
-        label="PHM 2018 dataset — coolant-loop fault",
+        label="PHM 2018 dataset — Coolant Fault 🟠 [Needs Review]",
         csv_path=(
             ROOT
             / "benchmarks"
@@ -123,13 +124,15 @@ _DEMOS: tuple[DemoCase, ...] = (
             "Please isolate the cooling subsystem."
         ),
         description=(
-            "A public ion-mill dataset. The first rows are normal; the later "
-            "window contains the documented coolant-loop fault. Both configured "
-            "coolant channels move."
+            "Real public ion-mill etching tool dataset. The later time window "
+            "contains a documented coolant-loop fault where both coolant flow "
+            "and coolant pressure drop simultaneously. Several other declared "
+            "channels also move, so the result is not a bare confirmation."
         ),
         expected=(
-            "SUPPORTED — the configured coolant-loop candidate passes every "
-            "check. Next step: inspect the component."
+            "Result: Needs Review — the coolant check passed, but large anomalies "
+            "outside that check remain unexplained. Next step: ask an engineer to "
+            "review."
         ),
         source="Public PHM 2018 dataset sample",
         column_notes=_PHM_COLUMNS,
@@ -137,7 +140,7 @@ _DEMOS: tuple[DemoCase, ...] = (
     ),
     DemoCase(
         key="phm_flowcool_inconclusive",
-        label="PHM 2018 dataset — nominal coolant loop",
+        label="PHM 2018 dataset — Normal Run 🟢 [Regular Behavior]",
         csv_path=(
             ROOT
             / "benchmarks"
@@ -149,13 +152,13 @@ _DEMOS: tuple[DemoCase, ...] = (
         config_path=ROOT / "config" / "sensor_relations" / "ion_mill_phm18.yaml",
         note="Flowcool loop looks normal; check whether anything moved.",
         description=(
-            "The same public ion-mill columns and config, but a nominal window. "
-            "The configured channels are present and not anomalous, so the gate "
-            "abstains instead of inventing a fault."
+            "The same public ion-mill tool during healthy production. The "
+            "sensors are present and stay within normal limits, so FabAgent "
+            "reports Regular Behavior instead of inventing a false alarm."
         ),
         expected=(
-            "INSUFFICIENT — the configured channels are present but normal. "
-            "Next step: collect more data."
+            "Result: Regular Behavior — every checked signal stayed below its "
+            "alert threshold. Next step: keep monitoring."
         ),
         source="Public PHM 2018 dataset sample",
         column_notes=_PHM_COLUMNS,
@@ -163,23 +166,23 @@ _DEMOS: tuple[DemoCase, ...] = (
     ),
     DemoCase(
         key="tep_feed_supported",
-        label="TEP dataset — feed-system disturbance",
+        label="TEP dataset — Feed Disturbance 🔴 [Fault Confirmed]",
         csv_path=(
             ROOT / "benchmarks" / "datasets" / "tep" / "sample" / "IDV6_sample.csv"
         ),
         config_path=ROOT / "config" / "sensor_relations" / "tep_reactor.yaml",
         note=(
-            "Reactor feed disturbance suspected; A feed flow and valve look off. "
-            "Check the feed system."
+            "Reactor feed disturbance suspected; A feed flow and reactor pressure "
+            "look off. Check the feed system."
         ),
         description=(
-            "A public Tennessee Eastman Process dataset. The feed flow and feed "
-            "valve move together; reactor pressure is corroboration, not a "
-            "substitute for the cause channels."
+            "Real Tennessee Eastman chemical reactor benchmark. Feed flow and "
+            "reactor pressure move abnormally together; the valve position is "
+            "recorded but is not part of this check."
         ),
         expected=(
-            "SUPPORTED — the configured feed-system candidate passes every "
-            "check. Next step: escalate to an engineer."
+            "Result: Fault Confirmed — both configured pattern channels moved. "
+            "Next step: ask an engineer to review."
         ),
         source="Public TEP dataset sample",
         column_notes=_TEP_COLUMNS,
@@ -187,7 +190,7 @@ _DEMOS: tuple[DemoCase, ...] = (
     ),
     DemoCase(
         key="tep_unmodeled",
-        label="TEP dataset — unmodeled disturbance",
+        label="TEP dataset — Unmodeled Disturbance 🟠 [Needs Review]",
         csv_path=(
             ROOT / "benchmarks" / "datasets" / "tep" / "sample" / "IDV3_sample.csv"
         ),
@@ -197,13 +200,14 @@ _DEMOS: tuple[DemoCase, ...] = (
             "itself looks steady."
         ),
         description=(
-            "A public Tennessee Eastman Process dataset for a different "
-            "disturbance. The reactor is upset, but the configured feed-cause "
-            "channels stay normal, so the gate abstains."
+            "A different TEP disturbance (temperature step). Reactor pressure "
+            "moved outside its normal range, but no saved feed-system check "
+            "explains it. FabAgent asks for a human review instead of calling "
+            "this run normal."
         ),
         expected=(
-            "INSUFFICIENT — the reactor is upset, but the configured feed-cause "
-            "channels stay normal. Next step: collect more data."
+            "Result: Needs Review — a signal moved without a saved check "
+            "explaining it. Next step: ask an engineer to review."
         ),
         source="Public TEP dataset sample",
         column_notes=_TEP_COLUMNS,
@@ -211,65 +215,65 @@ _DEMOS: tuple[DemoCase, ...] = (
     ),
     DemoCase(
         key="synthetic_flowcool_supported",
-        label="Synthetic dataset — coolant-loop fault",
+        label="Synthetic dataset — Coolant Fault 🔴 [Fault Confirmed]",
         csv_path=ROOT / "samples" / "flowcool_supported.csv",
-        config_path=ROOT / "config" / "sensor_relations" / "ion_mill_phm18.yaml",
+        config_path=ROOT / "config" / "sensor_relations" / "synthetic_flowcool.yaml",
         note="Flowcool loop excursion during the RF step.",
         description=(
-            "A tiny hand-written synthetic dataset. Both configured coolant "
-            "channels move; the model narrative is separate from the gate."
+            "Compact synthetic testbed with known mathematical ground truth. "
+            "Both primary coolant channels exceed the 3.5z threshold."
         ),
         expected=(
-            "SUPPORTED — the configured coolant-loop candidate passes every "
-            "check. Next step: inspect the component."
+            "Result: Fault Confirmed — clean positive control. "
+            "Next step: inspect the part."
         ),
-        source="Synthetic dataset (not field data)",
-        column_notes=_PHM_COLUMNS,
+        source="Synthetic dataset (seeded ground truth)",
+        column_notes=_SYNTHETIC_FLOWCOOL_COLUMNS,
         signal_notes=_PHM_SIGNALS,
     ),
     DemoCase(
         key="synthetic_flowcool_inconclusive",
-        label="Synthetic dataset — nominal coolant loop",
+        label="Synthetic dataset — Normal Run 🟢 [Regular Behavior]",
         csv_path=ROOT / "samples" / "flowcool_inconclusive.csv",
-        config_path=ROOT / "config" / "sensor_relations" / "ion_mill_phm18.yaml",
+        config_path=ROOT / "config" / "sensor_relations" / "synthetic_flowcool.yaml",
         note="Flowcool loop looks normal; check whether anything moved.",
         description=(
-            "A tiny hand-written synthetic dataset with the configured channels "
-            "present but nominal. The gate asks for more data."
+            "Compact synthetic testbed with all sensors in quiet baseline state. "
+            "Demonstrates zero-LLM mathematical abstention."
         ),
         expected=(
-            "INSUFFICIENT — the configured channels are present but normal. "
-            "Next step: collect more data."
+            "Result: Regular Behavior — every checked signal stayed below its "
+            "alert threshold. Next step: keep monitoring."
         ),
-        source="Synthetic dataset (not field data)",
-        column_notes=_PHM_COLUMNS,
+        source="Synthetic dataset (seeded ground truth)",
+        column_notes=_SYNTHETIC_FLOWCOOL_COLUMNS,
         signal_notes=_PHM_SIGNALS,
     ),
     DemoCase(
         key="synthetic_rf_veto",
-        label="Synthetic dataset — sensor contradiction",
+        label="Synthetic dataset — Sensor Conflict 🟡 [Sensors Disagree]",
         csv_path=ROOT / "samples" / "rf_contradiction.csv",
-        config_path=ROOT / "config" / "sensor_relations" / "synthetic_twin.yaml",
+        config_path=ROOT / "config" / "sensor_relations" / "synthetic_rf.yaml",
         note=(
             "RF reflectometer excursion on Chamber B; corroborating channels "
             "look quiet."
         ),
         description=(
-            "The RF sensor is anomalous while every configured corroborating "
-            "channel is nominal. The Python contradiction rule vetoes the "
-            "candidate even if the model tells a story."
+            "The primary RF sensor spikes to 12z while redundant electrical, "
+            "thermal, and pressure sensors stay flat. A naive LLM falsely halts "
+            "the chamber; FabAgent triggers a hard veto for sensor contradiction."
         ),
         expected=(
-            "VETOED — one sensor moves while every configured corroborating "
-            "channel stays quiet. Next step: review the contradiction."
+            "Result: Sensors Disagree — primary sensor spiked but backup stayed "
+            "flat. Next step: check the sensor first."
         ),
-        source="Synthetic dataset (not field data)",
+        source="Synthetic dataset (seeded ground truth)",
         column_notes=_RF_COLUMNS,
         signal_notes=_RF_SIGNALS,
     ),
     DemoCase(
         key="unknown_export",
-        label="Unknown tool dataset — no matching config",
+        label="Unknown tool dataset — No Config ⚪ [Unknown Machine]",
         csv_path=ROOT / "samples" / "unknown_tool.csv",
         config_path=None,
         note="New tool export; no configured schema yet.",
@@ -279,8 +283,8 @@ _DEMOS: tuple[DemoCase, ...] = (
             "a draft config for review."
         ),
         expected=(
-            "EXPERIMENTAL — no configured schema matches. Next step: review the "
-            "draft mapping; it is unverified."
+            "Result: Unknown Machine — review the guessed columns and save a "
+            "tool model."
         ),
         source="Synthetic dataset (not field data)",
         column_notes=_UNKNOWN_COLUMNS,

@@ -173,7 +173,13 @@ def run_w3(root: Path, config_path: Path | None = None) -> W3Report:
     """Run B4 abstention checks using only seeded data and deterministic Python."""
     project_root = Path(__file__).resolve().parents[2]
     configuration = (
-        config_path or project_root / "config/sensor_relations/synthetic_twin.yaml"
+        config_path
+        or project_root
+        / "benchmarks"
+        / "evaluator"
+        / "fixtures"
+        / "v1"
+        / "synthetic_twin.yaml"
     )
     generated = generate_all(root, configuration)
     if tuple(item.case_id for item in generated) != _CASE_IDS:

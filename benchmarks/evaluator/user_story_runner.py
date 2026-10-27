@@ -266,9 +266,7 @@ def run_story(
     with TemporaryDirectory() as temp_dir:
         scenarios = build_scenarios(root, Path(temp_dir))
         reports = [
-            _scenario_report(
-                scenario, root, offline=offline, max_tokens=max_tokens
-            )
+            _scenario_report(scenario, root, offline=offline, max_tokens=max_tokens)
             for scenario in scenarios
         ]
     return {

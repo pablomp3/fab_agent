@@ -250,7 +250,15 @@ def generate_all(
 ) -> tuple[GenerationRecord, ...]:
     """Write seeded adversarial dossiers (B4a-B4d), public manifests, and truth."""
     project_root = Path(__file__).resolve().parents[2]
-    config = config_path or project_root / "config/sensor_relations/synthetic_twin.yaml"
+    config = (
+        config_path
+        or project_root
+        / "benchmarks"
+        / "evaluator"
+        / "fixtures"
+        / "v1"
+        / "synthetic_twin.yaml"
+    )
     config_hash = _sha256(config.read_bytes())
     generator_hash = _sha256(Path(__file__).read_bytes())
     return tuple(
@@ -267,7 +275,12 @@ def generate_positive_control(
     project_root = Path(__file__).resolve().parents[2]
     config = (
         config_path
-        or project_root / "config/sensor_relations/synthetic_twin_positive.yaml"
+        or project_root
+        / "benchmarks"
+        / "evaluator"
+        / "fixtures"
+        / "v1"
+        / "synthetic_twin_positive.yaml"
     )
     config_hash = _sha256(config.read_bytes())
     generator_hash = _sha256(Path(__file__).read_bytes())
