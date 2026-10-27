@@ -24,7 +24,7 @@ product, not a bolt-on).
 | Project description (what, why, how) | Draft in `README.md` / `docs/PRODUCT.md` | Update for submission |
 | Working demo URL | **Missing** | `docs/ui/contact.md` has a placeholder; add the real Nebius URL |
 | 3-minute public YouTube video with audio covering Nebius + Nemotron | **Missing** | Record |
-| Public code repository with open-source license visible at top | Repo exists; **working tree not pushed**; license present | `LICENSE` |
+| Public code repository with open-source license visible at top | Repo pushed (`84f9ce1`); license present | `LICENSE` |
 | README with setup instructions and run guidance | Exists; needs final rewrite | `README.md` |
 | Highlight Nemotron / Token Factory / other Nebius tools | Partly | README, UI, video |
 | Feedback on Nebius Token Factory / AI Cloud / NVIDIA tools | **Missing** | Add a short section to README/Devpost |

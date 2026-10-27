@@ -254,7 +254,7 @@ See [`HYBRID_IMPLEMENTATION.md`](HYBRID_IMPLEMENTATION.md). In short:
 ## 5. P2 — submission
 
 - Hosted Nebius URL (Streamlit, server-side keys).
-- Public repo pushed; `origin/main` is still `fbc2bbd`.
+- Public repo pushed; `origin/main` is `84f9ce1`.
 - 3-minute video.
 - Correct track: **Best Apps and Agents** (the old label “Industrial Copilot &
   Agentic Root Cause Analysis (RCA)” is not an official track).
@@ -263,9 +263,11 @@ See [`HYBRID_IMPLEMENTATION.md`](HYBRID_IMPLEMENTATION.md). In short:
 
 ## 6. Repository state
 
-- `HEAD` = `origin/main` = `fbc2bbd`.
-- The entire UI/product overhaul is uncommitted (working tree only).
-- No hosted URL in `docs/ui/contact.md`; it only says “port 8501”.
+- `HEAD` = `origin/main` = `84f9ce1` (the hybrid/UI/benchmark work is pushed).
+- The tracked tree is clean. One untracked legacy sample
+  (`benchmarks/datasets/tep/sample/unknown_source.csv`) is left in place because
+  it is referenced only by archived benchmark notes, not the current runner.
+- No hosted URL in `docs/ui/contact.md` yet; it still needs the real Nebius URL.
 - Old docs are in `.archive/2026-10-26/` (ignored), not in the product.
 - Do not commit `.archive/`, `.venv/`, raw keys, or private ground truths.
 
