@@ -2275,6 +2275,19 @@ def _head_to_head_case_rows(
 
 def _page_performance() -> None:
     _render_markdown_file(_PERFORMANCE_DOC)
+    protocol_col, artifacts_col = st.columns(2)
+    protocol_col.link_button(
+        "📄 Benchmark protocol",
+        "https://github.com/pablomp3/fab_agent/blob/main/"
+        "docs/EVALUATION.md",
+        use_container_width=True,
+    )
+    artifacts_col.link_button(
+        "🗂️ Committed benchmark artifacts",
+        "https://github.com/pablomp3/fab_agent/tree/main/"
+        "benchmarks/evaluator/results/naive_llm/2026-10-28",
+        use_container_width=True,
+    )
     head = _load_head_to_head()
     if head is None:
         st.subheader("Benchmark in progress")

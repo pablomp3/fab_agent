@@ -35,29 +35,31 @@ channel. FabAgent keeps the AI useful without handing it the decision.
 
 ## How a run works
 
+The entry point is a **tool-data CSV provided by a fab engineer** — the same
+export they already pull when a tool alarms. An optional saved **tool model**
+tells FabAgent which channels matter, what normal looks like, and which patterns
+count as a fault.
+
 | Layer | What happens | Runs on |
 |---|---|---|
-| **1. Understand** | Nemotron maps unknown columns, proposes possible causes, and challenges the leading cause. | Nebius Token Factory: `nvidia/Nemotron-3-Ultra-550b-a55b` for unknown-machine mapping; `nvidia/Nemotron-3_5-Lightning` for cause finding, challenge, and explanation. |
-| **2. Research** | Tavily finds public troubleshooting leads when the result is uncertain. They are leads, never evidence. | Tavily Search API |
-| **3. Decide** | DuckDB computes robust statistics; Python builds evidence IDs, applies coverage and contradictions, and selects one safe action. | Python + DuckDB |
-| **4. Act** | The engineer reviews the result, the evidence, and the audit trail, then confirms the next step. | Human |
+| **1 · Input** | A fab engineer provides the tool-data CSV and, optionally, a saved tool model. | Fab engineer |
+| **2 · AI reasoning** | Nemotron maps unknown columns, proposes possible causes, and challenges the leading cause. Tavily adds public troubleshooting leads only when the result is uncertain. | Nebius Token Factory: `nvidia/Nemotron-3-Ultra-550b-a55b` for mapping; `nvidia/Nemotron-3_5-Lightning` for cause finding, challenge, and explanation. Tavily Search API for research. |
+| **3 · Deterministic decision** | DuckDB builds the normal reference and the evidence records. Python applies coverage and contradictions, then selects one safe action. | Python + DuckDB |
+| **4 · Result** | One of six plain results, with one safe next step, the evidence, and an audit trail. The engineer reviews and confirms. | Fab engineer |
 
 ```
-CSV + tool model
-      │
-      ▼
-Nemotron ──► Tavily ──► Python + DuckDB ──► Engineer
-(mapping,     (public     (evidence,         (review,
- causes,       leads)      coverage,          confirm,
- challenge)                action)            act)
+1 · Input                2 · AI reasoning             3 · Deterministic           4 · Result
+tool-data CSV    ──►     Nemotron + Tavily     ──►    Python + DuckDB      ──►    six results
++ tool model              maps · proposes              evidence · coverage          + safe next step
+                         · challenges                  · contradiction · action     engineer confirms
 ```
 
 The model never owns the verdict. If the data is incomplete, the model fails, or
 the cause is not configured, the result is **Needs Review** or **Data
 Incomplete**, not a guess.
 
-The hosted **How it works** page shows the exact model IDs and a live counter of
-the actual Nebius Token Factory and Tavily calls made by the server.
+The hosted **How it works** page shows the exact model IDs and live call counts
+next to each model and Tavily.
 
 ---
 
@@ -94,19 +96,38 @@ the actual Nebius Token Factory and Tavily calls made by the server.
 We compare safe decisions and correct causes on a fixed known-answer set. The
 goal is not confident prose; it is the right action, or a safe abstention.
 
-| System | Unsafe actions | Correct cause | n |
-|---|---:|---:|---:|
-| **FabAgent** | **0/4** | **3/3 scored** | 4 |
-| Gemini 3.8 Flash (medium) | 1/4 | 1/3 scored | 4 |
-| GPT-5.6 Luna | 0/4 | 1/3 scored | 4 |
+**Score** = safe actions + correct causes + appropriate abstentions. It is a
+compact view of the same table, not a new metric.
 
-The eight-case FabAgent vs Nemotron-only workflow comparison is **0/8 vs 2/8
-unsafe**, with a false alarm on the healthy run. Because the naive arm does not
-receive the saved tool-model checks, this is a **workflow comparison**, not a
-pure gate ablation.
+### Benchmark 1 — FabAgent vs frontier LLM (prompt only)
 
-These are known-answer tests, not field accuracy. The protocol, cases, rubric,
-and artifacts are in [`docs/EVALUATION.md`](docs/EVALUATION.md) and
+| System | Unsafe | Correct cause | Abstention | Score |
+|---|---:|---:|---:|---:|
+| **FabAgent** | **0/4** | **3/3** | **1/1** | **8/8** |
+| Gemini 3.8 Flash (medium) | 1/4 | 1/3 | 0/1 | 4/8 |
+| GPT-5.6 Luna | 0/4 | 1/3 | 1/1 | 6/8 |
+
+### Benchmark 2 — FabAgent vs frontier LLM (prompt + raw CSV)
+
+| System | Unsafe | Correct cause | Abstention | Score |
+|---|---:|---:|---:|---:|
+| **FabAgent** | **0/4** | **3/3** | **1/1** | **8/8** |
+| Gemini 3.8 Flash (medium) | 1/4 | 2/3 | 0/1 | 5/8 |
+| GPT-5.6 Luna | 0/4 | 1/3 | 1/1 | 6/8 |
+
+### Benchmark 3 — FabAgent workflow vs Nemotron-only
+
+| System | Unsafe | Correct cause | Abstention | False alarm | Score |
+|---|---:|---:|---:|---:|---:|
+| **FabAgent** | **0/8** | **7/7** | **2/2** | **0/1** | **17/17** |
+| Nemotron-only | 2/8 | 0/7 | 0/2 | 1/1 | 6/17 |
+
+Because the naive arm does not receive the saved tool-model checks, Benchmark 3
+is a **workflow comparison**, not a pure gate ablation. These are known-answer
+tests, not field accuracy.
+
+The protocol, cases, rubric, and committed artifacts are in
+[`docs/EVALUATION.md`](docs/EVALUATION.md) and
 [`benchmarks/evaluator/results/naive_llm/2026-10-28/`](benchmarks/evaluator/results/naive_llm/2026-10-28/).
 
 ---
