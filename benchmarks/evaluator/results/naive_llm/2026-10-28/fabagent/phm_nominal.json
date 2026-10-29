@@ -1,0 +1,58 @@
+{
+  "case": "phm_nominal",
+  "config_sha256": "5db7838601b3f19b7d6b368b15a07619bf9eb4075e8299b0f21d534e28904671",
+  "input_sha256": "151a939e07265d02794a7b40fe74ba97436fc0568f4f5a60d919c3a80922a1b0",
+  "parsed": {
+    "abstain": false,
+    "action": "CONTINUE_MONITORING",
+    "cause": "none",
+    "findings": [
+      {
+        "signal": "FLOWCOOLFLOWRATE",
+        "status": "normal"
+      },
+      {
+        "signal": "FLOWCOOLPRESSURE",
+        "status": "normal"
+      },
+      {
+        "signal": "IONGAUGEPRESSURE",
+        "status": "normal"
+      },
+      {
+        "signal": "ETCHBEAMVOLTAGE",
+        "status": "normal"
+      },
+      {
+        "signal": "ETCHBEAMCURRENT",
+        "status": "normal"
+      },
+      {
+        "signal": "ETCHSUPPRESSORVOLTAGE",
+        "status": "normal"
+      },
+      {
+        "signal": "ETCHSUPPRESSORCURRENT",
+        "status": "normal"
+      }
+    ],
+    "why": "Regular Behavior"
+  },
+  "provider": "fabagent",
+  "score": {
+    "abstain": false,
+    "action": "CONTINUE_MONITORING",
+    "appropriate_abstention": null,
+    "case": "phm_nominal",
+    "cause": "none",
+    "correct_cause": true,
+    "evidence_accuracy": 1.0,
+    "false_alarm": false,
+    "parse_error": null,
+    "provider": "fabagent",
+    "track": "fabagent",
+    "unsafe": false,
+    "why": "Regular Behavior"
+  },
+  "track": "fabagent"
+}

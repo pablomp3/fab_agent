@@ -1,4 +1,4 @@
-"""FabAgent technician dashboard (W6).
+"""FabAgent technician dashboard.
 
 The dashboard is deliberately a glass box: it shows the input preview, the
 engineer-controlled tool configuration, the scoped evidence, the model
@@ -18,7 +18,7 @@ import tempfile
 from collections.abc import Mapping, Sequence
 from dataclasses import asdict
 from pathlib import Path
-from typing import cast
+from typing import TypedDict, cast
 
 import streamlit as st
 import yaml
@@ -37,12 +37,9 @@ from src.demo_data import (
     GeneratedDataset,
     generate_demo_csv,
 )
-from src.dossier import DEFAULT_MODELS_CONFIG
-from src.model_config import ModelConfigurationError, load_model_route
+from src.model_config import ModelConfigurationError
 from src.ui import config_promotion, presentation
-from src.ui.presentation import (
-    GLOSSARY,
-)
+from src.ui.presentation import RESULT_GLOSSARY, TERM_GLOSSARY
 
 # Do not reload ``presentation`` here. Streamlit reruns this script, but
 # reloading a module that imports new schema classes can fail while an older
@@ -60,6 +57,27 @@ _RESULTS_DIR = (
     Path(__file__).resolve().parents[2] / "benchmarks" / "evaluator" / "results"
 )
 _BENCHMARK_SUMMARY_GLOB = "naive_llm/*/summary.json"
+_HEAD_TO_HEAD_GLOB = "naive_llm/*/head_to_head.json"
+_CASE_LABELS = {
+    "phm_coolant_coverage": "PHM ion-mill coolant window",
+    "phm_nominal": "PHM healthy production",
+    "tep_feed_disturbance": "TEP feed disturbance",
+    "tep_unmodeled": "TEP unmodeled disturbance",
+    "synthetic_conflict_b4a": "Synthetic B4a sensor conflict",
+    "missing_coolant_flow": "PHM coolant, missing flow channel",
+    "synthetic_positive_b4e": "Synthetic B4e positive control",
+    "synthetic_conflict_rf": "Synthetic RF sensor conflict",
+}
+_BENCHMARK_ACTION_LABELS = {
+    "INSPECT_COMPONENT": "Inspect the part",
+    "INSPECT_SENSOR_CALIBRATION": "Check the sensor",
+    "CONTINUE_MONITORING": "Keep monitoring",
+    "ESCALATE_TO_ENGINEER": "Ask an engineer",
+    "COLLECT_MORE_DATA": "Get more data",
+    "HOLD_LOT": "Hold the lot",
+    "ADJUST_RECIPE": "Change the recipe",
+    "UNPARSABLE": "No usable answer",
+}
 
 _BEHAVIOR_LABELS = {
     "supported": "Fault pattern present",
@@ -67,21 +85,25 @@ _BEHAVIOR_LABELS = {
     "contradiction": "One sensor only (contradiction)",
 }
 
-# The one-click demo should show the product succeeding, not only abstaining.
-# The public TEP feed case is a real benchmark case with a confirmed result.
-RECOMMENDED_DEMO_KEY = "tep_feed_supported"
+# The one-click demo should lead with a semiconductor case, not the
+# cross-industry TEP reactor. The synthetic coolant case is a clean positive
+# control; the video can then show the real PHM case and its honest abstention.
+RECOMMENDED_DEMO_KEY = "synthetic_flowcool_supported"
 
 _STAGE_LABELS = {
     "read": "Read the CSV — load the engineer's tool export",
     "triage": ("Match tool configuration — find the YAML that describes these columns"),
     "mapping": (
-        "Draft column mapping with Nemotron — for unknown tools (experimental)"
+        "NVIDIA Nemotron mapping — guess column roles (experimental)"
     ),
     "duckdb": "Scan the data — compute statistics per column (DuckDB)",
     "python": "Run safety checks — check for abnormal, missing, or conflicting data",
-    "model": "Nemotron explanation — plain-language summary (never decides)",
-    "gate": "Python safety check — combine evidence and select next step",
-    "tavily": "Web references (Tavily) — leads when data is not reliable",
+    "model": (
+        "NVIDIA Nemotron reasoning — propose, challenge, and explain "
+        "(never decides)"
+    ),
+    "gate": "Python decision gate — select one safe next step",
+    "tavily": "Tavily research — public leads when the data is uncertain",
 }
 
 _STAGE_ICONS = {
@@ -185,142 +207,86 @@ def _v2_loader_ready() -> bool:
     return True
 
 
-def _model_label() -> str:
-    """Return the plain role name, never a model ID or provider detail."""
-    try:
-        route = load_model_route(DEFAULT_MODELS_CONFIG, "SYNTHESIS")
-    except ModelConfigurationError:
-        return "Nemotron cause finder (server-side)"
-    return f"Nemotron {route.role.casefold()} (server-side)"
-
-
 _DOT_BLOCK = re.compile(r"```dot\n(.*?)```", re.DOTALL)
+_EVIDENCE_ID = re.compile(r"\bEV_[A-F0-9]{8,}\b")
 
 
-def _render_flow_diagram(*, detailed: bool = False) -> None:
-    """A compact, product-level picture of the evidence-gated pipeline."""
+def _plain_model_text(text: str) -> str:
+    """Keep raw evidence IDs in the audit view, not in the main AI narrative."""
+    return _EVIDENCE_ID.sub("the cited evidence", text)
+
+
+
+def _render_flow_diagram() -> None:
+    """One vertical flow: input -> AI reasoning -> Python decision -> result."""
     st.html(
         """
 <style>
-.fa-thesis {
-  border-left: 4px solid #0B6E99;
-  background: #F3F6F8;
-  border-radius: 10px;
-  padding: 10px 14px;
-  margin: 0.2rem 0 0.9rem;
-  color: #1F2933;
-  font-size: 0.98rem;
-}
-.fa-flow {
-  display: flex;
-  align-items: stretch;
-  gap: 10px;
-  flex-wrap: wrap;
-  margin: 0.2rem 0 0.6rem;
-}
-.fa-step {
-  flex: 1 1 190px;
-  min-width: 175px;
-  background: #F3F6F8;
+.fa-vflow { max-width: 760px; margin: 0.4rem auto 1.1rem; }
+.fa-vbox {
+  border-radius: 12px;
+  padding: 14px 18px;
   border: 1px solid #DCE6EC;
-  border-radius: 14px;
-  padding: 14px 16px;
+  background: #F3F6F8;
 }
-.fa-step h4 {
+.fa-vbox h4 {
   margin: 0 0 4px;
-  color: #0B6E99;
   font-size: 0.72rem;
   letter-spacing: 0.09em;
   text-transform: uppercase;
-}
-.fa-step p {
-  margin: 0;
-  color: #1F2933;
-  font-size: 0.93rem;
-  line-height: 1.35;
-}
-.fa-step small {
-  display: block;
-  margin-top: 6px;
-  color: #52606D;
-  font-size: 0.79rem;
-  line-height: 1.3;
-}
-.fa-step.model { background: #E8F3F8; border-color: #C7E2EE; }
-.fa-step.core { background: #0B6E99; border-color: #0B6E99; }
-.fa-step.core h4, .fa-step.core p, .fa-step.core small { color: #FFFFFF; }
-.fa-step.output { background: #EAF6EF; border-color: #BFE3CD; }
-.fa-arrow {
-  align-self: center;
   color: #0B6E99;
-  font-size: 1.35rem;
-  font-weight: 700;
-  padding: 0 2px;
 }
-.fa-caption { color: #52606D; font-size: 0.82rem; margin: 0.1rem 0 0.7rem; }
+.fa-vbox p { margin: 0; color: #1F2933; font-size: 0.95rem; }
+.fa-vbox small { display: block; margin-top: 5px; color: #52606D; font-size: 0.82rem; }
+.fa-vbox.ai { background: #E8F3F8; border-color: #C7E2EE; }
+.fa-vbox.core { background: #0B6E99; border-color: #0B6E99; }
+.fa-vbox.core h4, .fa-vbox.core p, .fa-vbox.core small { color: #FFFFFF; }
+.fa-vbox.output { background: #EAF6EF; border-color: #BFE3CD; }
+.fa-vline { width: 2px; height: 18px; background: #9FB3C8; margin: 0 auto; }
+.fa-steps { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 9px; }
+.fa-steps span {
+  border: 1px solid rgba(255,255,255,0.42);
+  background: rgba(255,255,255,0.14);
+  border-radius: 999px;
+  padding: 3px 9px;
+  font-size: 0.8rem;
+}
 </style>
-<div class="fa-thesis">
-  <b>Nemotron proposes.</b> Python checks. The engineer decides.
-</div>
-<div class="fa-flow">
-  <div class="fa-step">
+<div class="fa-vflow">
+  <div class="fa-vbox">
     <h4>1 · Input</h4>
-    <p><b>CSV telemetry</b></p>
-    <small>Plus an optional tool model: signals, normal reference, fault checks.</small>
+    <p><b>CSV export + optional tool model</b></p>
+    <small>Signals, a normal reference, and the engineer's saved fault checks.</small>
   </div>
-  <div class="fa-arrow">→</div>
-  <div class="fa-step model">
-    <h4>2 · Helpers</h4>
+  <div class="fa-vline"></div>
+  <div class="fa-vbox ai">
+    <h4>2 · AI reasoning</h4>
     <p><b>NVIDIA Nemotron</b></p>
-    <small>Maps columns, proposes causes, challenges the leading cause.</small>
-    <small><b>Tavily</b> adds public leads only when the data is uncertain.</small>
+    <small>Maps unknown columns · proposes causes · challenges the leading cause ·
+    writes the explanation.</small>
+    <small><b>Tavily research</b> adds public troubleshooting leads when the data is
+    uncertain.</small>
   </div>
-  <div class="fa-arrow">→</div>
-  <div class="fa-step core">
-    <h4>3 · Decision</h4>
+  <div class="fa-vline"></div>
+  <div class="fa-vbox core">
+    <h4>3 · Deterministic decision</h4>
     <p><b>Python + DuckDB</b></p>
-    <small>Baseline → evidence IDs → coverage → contradictions →
-    one safe action.</small>
+    <div class="fa-steps">
+      <span>Baseline</span><span>Evidence</span><span>Coverage</span>
+      <span>Contradiction</span><span>Action</span>
+    </div>
+    <small>Every declared signal is scored. Missing data and contradictions are
+    hard stops. The model cannot change this result.</small>
   </div>
-  <div class="fa-arrow">→</div>
-  <div class="fa-step output">
-    <h4>4 · Output</h4>
-    <p><b>One of six results</b></p>
-    <small>A plain-language next step, an audit trail, and a human confirmation.</small>
+  <div class="fa-vline"></div>
+  <div class="fa-vbox output">
+    <h4>4 · Result</h4>
+    <p><b>One of six outcomes + one safe next step</b></p>
+    <small>With the evidence, the contradiction, and the audit trail attached.</small>
   </div>
-</div>
-<div class="fa-caption">
-  The model never receives raw telemetry. It sees a bounded evidence summary
-  under 2 KB; every citation is re-resolved by Python.
 </div>
 """
     )
-    if detailed:
-        st.html(
-            """
-<div class="fa-flow">
-  <div class="fa-step">
-    <h4>Deterministic core</h4>
-    <p><b>baseline → evidence → coverage → checks → gate → action</b></p>
-    <small>A contradiction is a hard veto. Missing data is evidence,
-    not silence.</small>
-  </div>
-  <div class="fa-step model">
-    <h4>Model boundary</h4>
-    <p><b>propose · challenge · explain</b></p>
-    <small>The model may add a narrative or a disconfirming test.
-    It cannot upgrade a result.</small>
-  </div>
-  <div class="fa-step output">
-    <h4>Proof surface</h4>
-    <p><b>evidence IDs + audit</b></p>
-    <small>Every result is traceable to the rows, the statistic, and the
-    configured check.</small>
-  </div>
-</div>
-"""
-        )
-
 
 def _render_markdown_file(path: Path) -> None:
     """Render a docs page; ```dot blocks become native Graphviz diagrams."""
@@ -587,25 +553,50 @@ def _render_config_editor(
     default_use: bool,
     config_path: Path | None = None,
     signal_notes: tuple[tuple[str, str], ...] = (),
-) -> tuple[str | None, bool]:
-    """Return ``(yaml_text, auto_detect)`` for the run.
+) -> tuple[str | None, bool, bool]:
+    """Return ``(yaml_text, auto_detect, force_experimental)`` for the run.
+
+    ``force_experimental`` is true only when the engineer explicitly turns off a
+    saved tool model. In that case the run must not silently triage a different
+    saved config; it goes straight to the bounded Auto mapping path.
 
     The normal view is a readable summary. The raw YAML is an advanced,
     engineer-only surface; a first-time user should never have to read it.
     """
     if default_yaml is None:
-        st.caption(
-            "No pre-configured tool model matches this tool. FabAgent will use "
-            "AI-assisted draft mapping (Auto mode)."
+        st.info(
+            "FabAgent will try to match a saved tool model. If none matches, it "
+            "uses experimental Auto mode: NVIDIA Nemotron guesses the column "
+            "roles, and the result stays unverified until an engineer saves a "
+            "model."
         )
-        return None, True
+        return None, True, False
 
     if config_path is not None:
         _render_config_summary(config_path, signal_notes)
+        use_model = st.toggle(
+            "Use this saved tool model for the run",
+            value=default_use,
+            key=f"{key}_use",
+            help=(
+                "On: deterministic RCA from the saved signals, normal "
+                "reference, and fault checks. Off: force experimental Auto "
+                "mode, where Nemotron guesses the column roles."
+            ),
+        )
+        if not use_model:
+            st.warning(
+                "Auto mode is forced for this run. NVIDIA Nemotron will guess "
+                "what each column means, saved tool models are bypassed, and the "
+                "result stays **Unknown Machine** until an engineer reviews and "
+                "saves a tool model. For a known tool, keep the saved model on."
+            )
+            return None, True, True
     else:
-        st.caption(
-            "No saved tool model for this upload. FabAgent will use Auto mode "
-            "and guess the columns. You can open Advanced to provide one."
+        st.info(
+            "No tool model is selected for this upload. FabAgent will try a "
+            "saved match first; if none matches, it uses experimental Auto mode "
+            "unless you provide a tool model below."
         )
 
     advanced = st.toggle(
@@ -619,17 +610,16 @@ def _render_config_editor(
     )
     if not advanced:
         if config_path is None:
-            return None, True
-        use = st.checkbox(
-            "Use this tool model for the run",
-            value=default_use,
-            key=f"{key}_use",
-        )
-        return (default_yaml, False) if use else (None, True)
+            return None, True, False
+        return default_yaml, False, False
 
     st.caption(
         "Raw YAML for an engineer. Unknown keys or a bad path fail with the "
         "exact location; the run uses this text directly."
+    )
+    st.caption(
+        "`baseline.file` is a server-side reference to a saved normal run. "
+        "Leave it unchanged unless you are moving the tool model."
     )
     text_key = f"{key}_yaml_text"
     source_key = f"{key}_yaml_source"
@@ -642,7 +632,7 @@ def _render_config_editor(
     if reload_col.button(
         "Reload saved YAML",
         key=f"{key}_yaml_reload",
-        use_container_width=True,
+        width="stretch",
         help="Replace the editor with the saved tool model.",
     ):
         st.session_state[text_key] = default_yaml
@@ -653,7 +643,7 @@ def _render_config_editor(
         file_name="tool_model.yaml",
         mime="text/yaml",
         key=f"{key}_yaml_download",
-        use_container_width=True,
+        width="stretch",
     )
     text = st.text_area(
         "Tool model YAML",
@@ -675,14 +665,7 @@ def _render_config_editor(
         "Alert level default is 3.5 robust z-scores. Lower = more sensitive; "
         "higher = stricter."
     )
-    use = st.checkbox(
-        "Use this tool model for the run",
-        value=default_use,
-        key=f"{key}_use",
-    )
-    if not use:
-        return None, True
-    return text, False
+    return text, False, False
 
 
 def _tavily_progress_text(result: RunResult) -> str:
@@ -696,7 +679,7 @@ def _tavily_progress_text(result: RunResult) -> str:
     if status == "unavailable":
         return "failed — search was unavailable"
     if status == "disabled":
-        return "skipped — disabled in sidebar"
+        return "skipped — disabled for this run"
     return "skipped"
 
 
@@ -785,6 +768,7 @@ def _run_analysis(
     demo_mode: bool,
     config_yaml: str | None,
     auto_detect: bool,
+    force_experimental: bool = False,
     label: str,
     use_tavily: bool,
     context: str,
@@ -825,6 +809,7 @@ def _run_analysis(
                                 engine_factory=offline_engine_factory(transport),
                                 mapping_factory=offline_mapping_factory(transport),
                                 enable_external_search=search_enabled,
+                                force_experimental=force_experimental,
                                 progress=progress,
                             )
                         else:
@@ -835,6 +820,7 @@ def _run_analysis(
                                 engine_factory=offline_engine_factory(transport),
                                 mapping_factory=offline_mapping_factory(transport),
                                 enable_external_search=search_enabled,
+                                force_experimental=force_experimental,
                                 progress=progress,
                             )
                     else:
@@ -843,6 +829,7 @@ def _run_analysis(
                                 path,
                                 note,
                                 enable_external_search=search_enabled,
+                                force_experimental=force_experimental,
                                 progress=progress,
                             )
                         else:
@@ -851,6 +838,7 @@ def _run_analysis(
                                 note,
                                 search_dir=search_dir,
                                 enable_external_search=search_enabled,
+                                force_experimental=force_experimental,
                                 progress=progress,
                             )
                 except Exception:
@@ -916,33 +904,34 @@ def _render_answer_card(result: RunResult) -> None:
             f"**{card.confidence_label}** — {card.confidence_help}",
         )
         st.markdown(f"#### 💡 {card.headline}")
+        st.caption(
+            "Python owns this decision. NVIDIA Nemotron explains and challenges "
+            "it; Tavily adds public research. Neither can change the result."
+        )
 
         with st.container(border=True):
             st.markdown(f"**Recommended Next Step:** {card.action_label}")
             st.caption(card.action_explanation)
 
         challenge = result.output.challenge
-        if challenge is not None:
+        if challenge is not None and (
+            challenge.downgraded or challenge.status.value == "checked"
+        ):
             if challenge.downgraded:
                 st.caption(
-                    ":orange[AI challenge: the disconfirming test was not met; "
-                    "the result was downgraded.]"
-                )
-            elif challenge.status.value == "checked":
-                st.caption(
-                    ":green[AI challenge: checked. The disconfirming test named "
-                    "a signal and Python verified it.]"
+                    ":orange[NVIDIA Nemotron challenge: the disconfirming test "
+                    "was not met; the result was downgraded.]"
                 )
             else:
                 st.caption(
-                    ":gray[AI challenge: unavailable; the deterministic result "
-                    "is unchanged.]"
+                    ":green[NVIDIA Nemotron challenge: checked. The model named "
+                    "a disconfirming signal, and Python verified it.]"
                 )
 
 
 def _render_why_summary(result: RunResult) -> None:
     """Render clear bullet points explaining which sensors moved and why."""
-    st.markdown("### 🔍 Telemetry Findings: Why we think this")
+    st.markdown("### 🔍 Telemetry findings: what moved and why")
 
     anomalies = [
         e for e in result.evidence if e.kind.value == "SENSOR_ANOMALY" and e.signal
@@ -1004,8 +993,10 @@ def _render_why_summary(result: RunResult) -> None:
         }
         if chart_data:
             st.caption(
-                "Peak deviation against each signal's alert level. Bars are "
-                f"clipped at {presentation.DISPLAY_Z_CAP:g}z; raw values are in Audit."
+                "Robust z = 0.6745 × |peak − median| / MAD over the normal "
+                "reference. 3.5z is the default alert level; bars are clipped at "
+                f"{presentation.DISPLAY_Z_CAP:g}z. Raw values are in the "
+                "technical audit."
             )
             st.bar_chart(chart_data)  # pyright: ignore[reportUnknownMemberType]
 
@@ -1056,8 +1047,9 @@ def _render_what_else_moved(result: RunResult) -> None:
         _table([asdict(row) for row in rows])
 
 
-def _render_measurements_tab(result: RunResult) -> None:
-    st.markdown("#### Checked Telemetry Measurements")
+def _render_telemetry_measurements(result: RunResult) -> None:
+    """One consolidated telemetry table, with raw audit data folded away."""
+    st.markdown("#### Telemetry measurements")
     summary = presentation.summarize(result)
 
     if result.mode == "safe":
@@ -1067,8 +1059,8 @@ def _render_measurements_tab(result: RunResult) -> None:
         )
     else:
         st.warning(
-            "**Configuration**: :orange[Unknown machine] — AI generated a draft "
-            "mapping below"
+            "**Configuration**: :orange[Unknown machine] — NVIDIA Nemotron "
+            "generated a draft mapping below"
         )
 
     last_bytes = st.session_state.get("last_csv_bytes")
@@ -1080,7 +1072,7 @@ def _render_measurements_tab(result: RunResult) -> None:
             labelled = {
                 labels.get(name, name): values for name, values in series.items()
             }
-            st.caption("Telemetry time-series profile for evaluated sensor channels:")
+            st.caption("Telemetry time-series profile for the evaluated channels:")
             st.line_chart(labelled)  # pyright: ignore[reportUnknownMemberType]
 
     if not result.evidence:
@@ -1090,15 +1082,32 @@ def _render_measurements_tab(result: RunResult) -> None:
     raw_rows = presentation.evidence_rows(result.evidence)
     plain_rows: list[dict[str, object]] = [
         {
+            "Signal": presentation.signal_label(result, r.signal),
             "Status": r.status,
-            "Signal": r.signal,
             "Peak deviation": r.how_unusual,
             "Alert level": r.alert_threshold,
-            "Window": r.window,
-            "Summary": r.summary,
+            "What it means": r.summary,
         }
         for r in raw_rows
     ]
+    st.caption(
+        "One row per declared channel. Peak deviation is a robust z-score; "
+        "values of 50z or more are shown as ≥50z."
+    )
+    with st.expander(
+        "How the robust z-score and the 3.5z alert level work",
+        expanded=False,
+    ):
+        st.markdown(
+            "Each declared signal is compared with the normal reference using "
+            "the median and MAD. The peak absolute score is:\n\n"
+            "`z = 0.6745 × |value − median| / MAD`\n\n"
+            "`0.6745 = Φ⁻¹(0.75)` makes this normal-equivalent sigma. **3.5z** "
+            "is the editable per-signal alert; **5z** is the coverage limit that "
+            "blocks a bare **Fault Confirmed** when a large signal is unexplained. "
+            "They are screening levels, not physics tolerances; use a calibrated "
+            "limit when available."
+        )
     _table(plain_rows)
 
     if result.output.required_next_checks:
@@ -1106,215 +1115,224 @@ def _render_measurements_tab(result: RunResult) -> None:
         for check in result.output.required_next_checks:
             st.write(f"- {check}")
 
-    st.divider()
-    st.markdown("### 🔍 Audit")
-    st.caption(
-        "Raw evidence IDs, internal statuses, model roles, and the challenge are "
-        "kept here so the main result stays in plain language."
-    )
-    audit_rows: list[dict[str, object]] = [
-        {
-            "Evidence ID": r.evidence_id,
-            "Raw status": r.raw_status,
-            "Signal": r.signal,
-            "Statistic": r.statistic,
-            "Value": r.value,
-            "Window": r.window,
-            "Summary": r.summary,
-        }
-        for r in raw_rows
-    ]
-    _table(audit_rows)
+    with st.expander(
+        "Technical audit — evidence IDs, raw statistics, and model boundary",
+        expanded=False,
+    ):
+        st.caption(
+            "For reviewers. The evidence payload row proves that the model saw "
+            "a bounded statistical summary under 2 KB, never the raw telemetry. "
+            "Python resolves every citation before it is used."
+        )
+        audit_rows: list[dict[str, object]] = [
+            {
+                "Evidence ID": r.evidence_id,
+                "Raw status": r.raw_status,
+                "Signal": r.signal,
+                "Statistic": r.statistic,
+                "Value": r.value,
+                "Window": r.window,
+                "Summary": r.summary,
+            }
+            for r in raw_rows
+        ]
+        _table(audit_rows)
 
-    mode = str(st.session_state.get("result_mode", "unknown"))
-    audit_summary: list[dict[str, object]] = [
-        {"Audit item": "Model roles", "Value": presentation.model_role_text(result)},
-        {
-            "Audit item": "Evidence payload",
-            "Value": presentation.model_payload_text(result),
-        },
-        {
-            "Audit item": "Model transport",
-            "Value": (
-                "Offline fixture (no network call)"
-                if mode == "offline"
-                else ("Live model" if result.model_called else "Not called")
-            ),
-        },
-        {
-            "Audit item": "Unresolved citations",
-            "Value": (
-                ", ".join(presentation.unresolved_citations(result))
-                or presentation.MISSING
-            ),
-        },
-    ]
-    _table(audit_summary)
+        mode = str(st.session_state.get("result_mode", "unknown"))
+        audit_summary: list[dict[str, object]] = [
+            {
+                "Audit item": "AI reasoning roles",
+                "Value": presentation.model_role_text(result),
+            },
+            {
+                "Audit item": "Evidence payload",
+                "Value": presentation.model_payload_text(result),
+            },
+            {
+                "Audit item": "Model transport",
+                "Value": (
+                    "Offline fixture (no network call)"
+                    if mode == "offline"
+                    else ("Live model" if result.model_called else "Not called")
+                ),
+            },
+            {
+                "Audit item": "Unresolved citations",
+                "Value": (
+                    ", ".join(presentation.unresolved_citations(result))
+                    or presentation.MISSING
+                ),
+            },
+        ]
+        _table(audit_summary)
 
-    challenge_rows = presentation.challenge_audit_rows(result)
-    if challenge_rows:
-        st.markdown("**Challenge check (audit)**")
-        _table(challenge_rows)
-    else:
-        st.caption("No challenge check was run for this result.")
-
-    gated_rows = [
-        asdict(row) for row in presentation.hypothesis_rows(result.output)
-    ]
-    if gated_rows:
-        st.markdown("**Gated conclusion (audit)**")
-        _table(gated_rows)
-
-    if result.mapping is not None:
-        _render_mapping(result)
+        challenge_rows = presentation.challenge_audit_rows(result)
+        if challenge_rows:
+            st.markdown("**Challenge check (audit)**")
+            _table(challenge_rows)
+        else:
+            st.caption("No challenge check was run for this result.")
 
 
-def _render_ai_tab(result: RunResult) -> None:
-    st.markdown("#### NVIDIA Nemotron AI Explanation")
+def _render_nemotron_explanation(result: RunResult) -> None:
+    """The NVIDIA Nemotron reasoning layer, kept separate from the decision."""
+    st.markdown("#### NVIDIA Nemotron explanation")
     mode = str(st.session_state.get("result_mode", "unknown"))
     if mode == "offline":
-        st.warning(
-            "⚠️ This explanation was produced by a local offline fixture. "
-            "The hosted demo uses live NVIDIA Nemotron when the server key is "
-            "present; there is no user switch to turn the service off."
+        st.caption(
+            ":orange[Offline Nemotron fixture · the hosted demo uses live NVIDIA "
+            "Nemotron on Nebius Token Factory.]"
         )
     elif _model_explanation_available(result):
-        st.success("✓ Live NVIDIA Nemotron (via Nebius Token Factory)")
+        st.caption(":green[● Live NVIDIA Nemotron · Nebius Token Factory]")
     else:
         st.warning(
-            "AI explanation unavailable for this run. The deterministic Python "
-            "result above still applies."
+            "NVIDIA Nemotron did not return a usable explanation for this run. "
+            "The deterministic Python result above still applies."
         )
 
     st.caption(
-        "Nemotron provides plain-language summaries for onboarding engineers. "
-        "Python independently re-resolves and validates every citation; the "
-        "model cannot override the result. Evidence IDs and unresolved citations "
-        "are kept in the Audit section."
+        "Nemotron maps unknown columns, proposes causes, challenges the leading "
+        "cause, and writes this explanation. Python resolves every cited evidence "
+        "ID and owns the decision; the model cannot override the result."
     )
 
     narratives = [
-        h.model_narrative
-        for h in result.output.hypotheses
-        if h.model_narrative is not None
+        hypothesis.model_narrative
+        for hypothesis in result.output.hypotheses
+        if hypothesis.model_narrative is not None
     ]
-    narrative_rows: list[dict[str, object]] = [
-        {
-            "What the model said": item.claim,
-            "What it thinks happened": item.failure_mode,
-            "Why": item.mechanism,
-        }
-        for item in narratives
+    proposed = [
+        item for item in result.output.differential if item.proposed_by_model
     ]
-    if narrative_rows:
-        _table(narrative_rows)
+    if narratives:
+        for narrative in narratives:
+            with st.container(border=True):
+                st.markdown(f"**{_plain_model_text(narrative.claim)}**")
+                st.markdown(_plain_model_text(narrative.mechanism))
+                st.caption(
+                    "Proposed failure mode: "
+                    f"{_plain_model_text(narrative.failure_mode)}"
+                )
+    elif proposed:
+        st.markdown("**Unverified causes proposed by NVIDIA Nemotron**")
+        st.caption(
+            "The model proposed these from the guessed mapping. No saved check "
+            "exists, so Python cannot confirm or reject them; the main result "
+            "stays **Unknown Machine**."
+        )
+        for item in proposed:
+            with st.container(border=True):
+                st.markdown(f"**{_plain_model_text(item.title)}**")
+                if item.reason:
+                    st.markdown(_plain_model_text(item.reason))
+                st.caption(
+                    "Unverified model proposal; it is not used for the result or "
+                    "the action."
+                )
     else:
-        st.info("No AI narrative was generated for this run.")
+        st.info(
+            "NVIDIA Nemotron did not return a usable explanation or cause for "
+            "this run. The deterministic Python result above still applies."
+        )
 
-    cited = sum(len(item.cited_evidence) for item in narratives)
-    unresolved = len(presentation.unresolved_citations(result))
-    col1, col2 = st.columns(2)
-    col1.metric("Evidence citations verified", cited)
-    col2.metric("Unresolved citations flagged", unresolved)
-    if unresolved:
-        st.warning(
-            "The model cited evidence IDs Python could not resolve. They are "
-            "rejected by safety rules and listed in the Audit section."
+    if narratives:
+        cited = sum(len(item.cited_evidence) for item in narratives)
+        unresolved = len(presentation.unresolved_citations(result))
+        col1, col2 = st.columns(2)
+        col1.metric("Citations verified by Python", cited)
+        col2.metric("Unresolved citations flagged", unresolved)
+        if unresolved:
+            st.warning(
+                "The model cited evidence IDs Python could not resolve. They are "
+                "rejected by the safety rules and listed in the technical audit."
+            )
+    elif proposed:
+        st.caption(
+            f"{len(proposed)} unverified cause(s) proposed. Python keeps the "
+            "result at **Unknown Machine** until a saved check exists."
+        )
+
+    challenge = result.output.challenge
+    if challenge is None:
+        st.caption("Challenge check: not run for this result.")
+    elif challenge.downgraded:
+        st.caption(
+            ":orange[Challenge check: the disconfirming test was not met; the "
+            "result was downgraded.]"
+        )
+    elif challenge.status.value == "checked":
+        st.caption(
+            ":green[Challenge check: checked. The model named a disconfirming "
+            "signal, and Python verified it.]"
+        )
+    else:
+        st.caption(
+            "Challenge check: the model did not return a usable disconfirming "
+            "test for this run. The Python result is unchanged."
         )
 
 
 def _render_web_tab(result: RunResult) -> None:
-    st.markdown("#### Troubleshooting Leads (Tavily Search)")
+    st.markdown("#### Tavily research: public troubleshooting leads")
     st.caption(
-        "Tavily web search runs only when telemetry is inconclusive, conflicting, "
-        "or unconfigured. Leads are for human investigation and never alter the "
-        "safety result."
+        "Tavily is the external research layer. It runs when telemetry is "
+        "inconclusive, conflicting, or unconfigured, sends only bounded signal "
+        "names, and returns public leads. Its references are context for a human, "
+        "never evidence for the safety gate."
     )
 
-    if result.external_search_status == "not_needed":
+    status = result.external_search_status
+    if status == "not_needed":
         st.info(
-            "External search skipped: The telemetry was consistent and supported "
-            "a clear outcome, so external web search was not needed."
+            "Tavily was on standby for this run: the telemetry was conclusive, so "
+            "no external lookup was needed. Run the PHM coolant or RF "
+            "sensor-conflict demo to see live research leads."
         )
         return
-    if result.external_search_status == "not_configured":
+    if status == "not_configured":
         st.warning(
-            "Tavily is not configured on this server. External references are skipped."
+            "Tavily is not configured on this server. Public research leads are "
+            "skipped; the deterministic result is unchanged."
         )
+        return
+    if status == "unavailable":
+        st.warning(
+            "Tavily was configured but the search failed for this run. The "
+            "deterministic result is unchanged."
+        )
+        return
+    if status == "disabled":
+        st.info("Tavily research was disabled for this run.")
         return
 
     if result.external_search_query:
         st.markdown(f"**Search query**: `{result.external_search_query}`")
 
     if result.output.external_sources:
+        st.caption(
+            f"{len(result.output.external_sources)} public reference(s) returned. "
+            "Tavily does not rank or decide; the engineer judges relevance."
+        )
         for source in result.output.external_sources:
             with st.container(border=True):
-                title = source.title or "Industrial Troubleshooting Reference"
+                title = source.title or "Industrial troubleshooting reference"
                 st.markdown(f"🔗 **[{title}]({source.url})**")
                 if source.snippet:
                     st.caption(source.snippet)
     else:
-        st.info("No external references found.")
-
-
-def _draft_with_check(
-    draft_yaml: str,
-    *,
-    label: str,
-    must_move: list[str],
-    stay_normal: list[str],
-    action: str,
-) -> str:
-    """Add one engineer-authored check to the model's draft tool model."""
-    if not must_move:
-        raise config_promotion.DraftConfigError(
-            "Choose at least one signal that must move for this fault."
-        )
-    raw = cast(object, yaml.safe_load(draft_yaml))
-    if not isinstance(raw, dict):
-        raise config_promotion.DraftConfigError("The draft YAML is not an object.")
-    data = cast(dict[str, object], raw)
-    checks_raw = data.get("checks", [])
-    if not isinstance(checks_raw, list):
-        raise config_promotion.DraftConfigError("The draft checks field is not a list.")
-    checks = cast(list[object], checks_raw)
-    check_id = config_promotion.slugify_config_name(label)
-    existing: set[str] = set()
-    for item in checks:
-        if isinstance(item, dict):
-            entry = cast(dict[str, object], item)
-            existing.add(str(entry.get("id")))
-    suffix = 2
-    base_id = check_id
-    while check_id in existing:
-        check_id = f"{base_id}_{suffix}"
-        suffix += 1
-    checks.append(
-        {
-            "id": check_id,
-            "label": label,
-            "kind": "equipment_fault",
-            "must_be_unusual": [
-                {"signal": signal, "direction": "any"} for signal in must_move
-            ],
-            "must_stay_normal": stay_normal,
-            "action": action,
-            "advice": "Review the named part before changing the recipe.",
-        }
-    )
-    data["checks"] = checks
-    return yaml.safe_dump(data, sort_keys=False)
+        st.info("Tavily returned no public references for this run.")
 
 
 def _render_mapping(result: RunResult) -> None:
     mapping = result.mapping
     if mapping is None:
         return
-    st.divider()
-    st.subheader("Unknown Machine: AI Draft Mapping")
+    st.markdown("#### Unknown machine — draft mapping")
     st.warning(
-        "We do not recognise this machine. Nemotron read the column names and "
-        "inferred candidate roles. Review the draft below before trusting."
+        "This machine is not configured. NVIDIA Nemotron guessed the roles below "
+        "from the column names and bounded statistics. Treat them as unverified "
+        "until an engineer reviews the draft."
     )
     mapping_rows = [
         {
@@ -1334,103 +1352,48 @@ def _render_mapping(result: RunResult) -> None:
 
     if not result.draft_yaml:
         return
-    st.markdown(
-        "**Draft tool model YAML** — review the columns and normal reference. "
-        "A saved draft with no fault checks stays **Unknown Machine**."
-    )
-    st.code(result.draft_yaml, language="yaml")
-    st.download_button(
-        "Download draft configuration",
-        data=result.draft_yaml,
-        file_name="experimental_draft.yaml",
-        mime="text/yaml",
-    )
-    columns = [row.column for row in presentation.mapping_signal_rows(mapping)]
-    with st.form("promote_draft"):
-        name = st.text_input("Configuration name", value="experimental_draft")
-        check_label = st.text_input(
-            "Fault check name",
-            value="Reviewed fault pattern",
-            help="The engineer's name for the pattern, not a model guess.",
+    with st.expander(
+        "Review or download the draft tool model YAML",
+        expanded=False,
+    ):
+        st.caption(
+            "This draft is **not saved on the server**. The hosted app is "
+            "stateless and does not write shared tool models. Download this "
+            "file, edit it, then paste it into **Engineer settings → Advanced: "
+            "edit the tool model YAML** on a later run to make the result "
+            "deterministic."
         )
-        must_move = st.multiselect(
-            "Signals that must move",
-            columns,
-            default=columns[:1],
-            help="All of these must be unusual for the check to confirm.",
+        st.code(result.draft_yaml, language="yaml")
+        st.download_button(
+            "Download draft YAML",
+            data=result.draft_yaml,
+            file_name="experimental_draft.yaml",
+            mime="text/yaml",
+            width="stretch",
         )
-        stay_normal = st.multiselect(
-            "Signals that must stay normal",
-            [column for column in columns if column not in must_move],
-            help="If one of these moves, the result is Sensors Disagree.",
-        )
-        action = st.selectbox(
-            "Next step",
-            [
-                "INSPECT_COMPONENT",
-                "ESCALATE_TO_ENGINEER",
-                "CONTINUE_MONITORING",
-            ],
-            format_func=lambda value: value.replace("_", " ").title(),
-        )
-        overwrite = st.checkbox("Replace existing config with this name")
-        save_draft = st.form_submit_button("Save draft without a check")
-        save_with_check = st.form_submit_button("Save with this fault check")
-
-    if save_draft or save_with_check:
-        try:
-            yaml_text = result.draft_yaml
-            if save_with_check:
-                yaml_text = _draft_with_check(
-                    result.draft_yaml,
-                    label=check_label,
-                    must_move=list(must_move),
-                    stay_normal=list(stay_normal),
-                    action=str(action),
-                )
-            saved = config_promotion.save_draft_config(
-                yaml_text, name, overwrite=overwrite
-            )
-        except (config_promotion.DraftConfigError, OSError) as exc:
-            st.error(str(exc))
-        else:
-            if save_with_check:
-                st.success(
-                    f"Saved {saved.name} with a fault check. Re-run the same "
-                    "upload: FabAgent will match this tool model, and the next "
-                    "result is deterministic."
-                )
-            else:
-                st.success(
-                    f"Saved {saved.name}. It has no fault checks yet, so the next "
-                    "run stays **Unknown Machine** until an engineer adds a check."
-                )
 
 
 def _render_result(result: RunResult) -> None:
-    # 1. Answer Card at the very top (B2)
+    # 1. The Python-owned decision is always visible.
     _render_answer_card(result)
 
-    # 2. Why we think this (C1, C4)
-    _render_why_summary(result)
-
-    # 3. Differential and coverage, below the result without hiding anomalies.
-    _render_differential(result)
-    _render_what_else_moved(result)
-
-    # 4. Organized Tabs for deep dive
-    tab_measurements, tab_ai, tab_web = st.tabs(
+    # 2. Two clear surfaces: the result evidence + AI explanation, and the
+    #    external research leads. No third "audit" tab competing with the result.
+    tab_main, tab_research = st.tabs(
         [
-            "📊 Measurements & Audit",
-            "🤖 AI explanation (Nemotron)",
-            "🌐 Web leads (Tavily)",
+            "📊 Result & AI explanation",
+            "🌐 Tavily research",
         ]
     )
-    with tab_measurements:
-        _render_measurements_tab(result)
-    with tab_ai:
-        _render_ai_tab(result)
-    with tab_web:
+    with tab_main:
+        if result.mapping is not None:
+            _render_mapping(result)
+        _render_why_summary(result)
+        _render_differential(result)
+        _render_what_else_moved(result)
+        _render_telemetry_measurements(result)
+        _render_nemotron_explanation(result)
+    with tab_research:
         _render_web_tab(result)
 
 
@@ -1447,37 +1410,7 @@ def _render_demo_runner(demo_mode: bool, use_tavily: bool) -> None:
     context = f"demo:{case.key}"
     _prepare_result_context(context)
 
-    if "Fault Confirmed" in case.label:
-        st.markdown(
-            "**:red[🔴 Fault Confirmed]** — *Simulates an active equipment failure.*"
-        )
-    elif "Regular Behavior" in case.label:
-        st.markdown(
-            "**:green[🟢 Regular Behavior]** — *Simulates normal healthy machine"
-            " operation.*"
-        )
-    elif "Sensors Disagree" in case.label:
-        st.markdown(
-            "**:orange[🟡 Sensors Disagree]** — *Simulates a"
-            " sensor/instrumentation conflict.*"
-        )
-    elif "Data Incomplete" in case.label:
-        st.markdown(
-            "**:orange[⚠️ Data Incomplete]** — *Simulates an export with a required"
-            " channel missing.*"
-        )
-    elif "Needs Review" in case.label:
-        st.markdown(
-            "**:orange[🟠 Needs Review]** — *Simulates a disturbance the saved"
-            " checks do not explain.*"
-        )
-    else:
-        st.markdown(
-            "**:gray[⚪ Unknown Machine]** — *Simulates an unconfigured machine"
-            " export.*"
-        )
-    st.caption(f"**Source**: {case.source}")
-    st.markdown(f"**Expected outcome**: {case.expected}")
+    st.caption(f"**Source:** {case.source}")
     st.info(case.description)
     _render_preview_from_path(case.csv_path, case.column_notes)
 
@@ -1490,13 +1423,14 @@ def _render_demo_runner(demo_mode: bool, use_tavily: bool) -> None:
 
     config_yaml = default_yaml
     auto_detect = False
+    force_experimental = False
     note = case.note
 
     with st.expander(
-        "⚙️ Engineer settings, alert thresholds & notes (optional)",
+        "⚙️ Engineer settings (tool model & note, optional)",
         expanded=False,
     ):
-        config_yaml, auto_detect = _render_config_editor(
+        config_yaml, auto_detect, force_experimental = _render_config_editor(
             default_yaml,
             key=f"demo_{case.key}",
             default_use=True,
@@ -1533,6 +1467,7 @@ def _render_demo_runner(demo_mode: bool, use_tavily: bool) -> None:
                 demo_mode=demo_mode,
                 config_yaml=config_yaml,
                 auto_detect=auto_detect,
+                force_experimental=force_experimental,
                 label=case.label,
                 use_tavily=use_tavily,
                 context=context,
@@ -1565,13 +1500,14 @@ def _render_upload_runner(demo_mode: bool, use_tavily: bool) -> None:
 
     config_yaml = config_promotion.CUSTOM_TOOL_MODEL_TEMPLATE
     auto_detect = True
+    force_experimental = False
     note = ""
 
     with st.expander(
-        "⚙️ Engineer settings, alert thresholds & notes (optional)",
+        "⚙️ Engineer settings (tool model & note, optional)",
         expanded=False,
     ):
-        config_yaml, auto_detect = _render_config_editor(
+        config_yaml, auto_detect, force_experimental = _render_config_editor(
             config_promotion.CUSTOM_TOOL_MODEL_TEMPLATE,
             key="upload_config",
             default_use=False,
@@ -1602,6 +1538,7 @@ def _render_upload_runner(demo_mode: bool, use_tavily: bool) -> None:
                 demo_mode=demo_mode,
                 config_yaml=config_yaml,
                 auto_detect=auto_detect,
+                force_experimental=force_experimental,
                 label=uploaded.name,
                 use_tavily=use_tavily,
                 context=context,
@@ -1667,13 +1604,14 @@ def _render_generator_runner(demo_mode: bool, use_tavily: bool) -> None:
 
     config_yaml = default_yaml
     auto_detect = False
+    force_experimental = False
     note = generated.template.note
 
     with st.expander(
-        "⚙️ Engineer settings, alert thresholds & notes (optional)",
+        "⚙️ Engineer settings (tool model & note, optional)",
         expanded=False,
     ):
-        config_yaml, auto_detect = _render_config_editor(
+        config_yaml, auto_detect, force_experimental = _render_config_editor(
             default_yaml,
             key=(
                 f"generated_{generated.template.key}_{generated.behavior}_"
@@ -1706,6 +1644,7 @@ def _render_generator_runner(demo_mode: bool, use_tavily: bool) -> None:
             demo_mode=demo_mode,
             config_yaml=config_yaml,
             auto_detect=auto_detect,
+            force_experimental=force_experimental,
             label=generated.filename,
             use_tavily=use_tavily,
             context=context,
@@ -1718,84 +1657,128 @@ def _render_generator_runner(demo_mode: bool, use_tavily: bool) -> None:
 def _render_sidebar(live_configured: bool, tavily_configured: bool) -> None:
     with st.sidebar:
         st.markdown("## 🔬 **FabAgent**")
-        st.caption("Evidence-Gated Semiconductor Troubleshooting Copilot")
+        st.caption("A manufacturing copilot with a focus on semiconductors")
         st.caption(
-            "Tells you whether factory sensor data can be trusted, and what to do next."
+            "Deterministic troubleshooting and RCA for manufacturing and "
+            "physical-AI operations."
         )
 
-        with st.popover("📖 Plain-language glossary", use_container_width=True):
-            st.markdown("### Terminology Guide")
-            st.caption("Clear explanations of industrial safety & AI terms:")
-            glossary_items = getattr(presentation, "GLOSSARY", GLOSSARY)
-            glossary_rows = [
-                {"Term": term, "Plain English meaning": definition}
-                for term, definition in glossary_items
-            ]
-            _table(glossary_rows)
+        with st.popover("📖 Possible outcomes & plain language", width="stretch"):
+            st.markdown("### Possible outcomes")
+            st.caption(
+                "Every run returns exactly one of these six results. Internal "
+                "engine states stay out of the main flow."
+            )
+            _table(
+                [
+                    {"Outcome": term, "What it means": definition}
+                    for term, definition in RESULT_GLOSSARY
+                ]
+            )
+            st.markdown("### Numbers & layers")
+            _table(
+                [
+                    {"Term": term, "Plain English meaning": definition}
+                    for term, definition in TERM_GLOSSARY
+                ]
+            )
 
         st.divider()
-        st.markdown("### Helper Services")
-        st.caption("These are part of the product, not optional switches.")
+        st.markdown("### AI reasoning layer")
+        st.markdown("**NVIDIA Nemotron**")
         if live_configured:
-            st.caption(":green[● NVIDIA Nemotron: live on the server]")
+            st.caption(":green[● Live on Nebius Token Factory]")
         else:
             st.caption(
-                ":orange[● NVIDIA Nemotron: offline fixture "
-                "(no server key in this environment)]"
+                ":orange[● Offline fixture · no server key in this environment]"
             )
-            st.caption(
-                "The deterministic result still runs. Add the server key to use "
-                "live Nemotron."
-            )
+        st.caption(
+            "Maps unknown columns · proposes causes · challenges the leader · "
+            "writes the explanation."
+        )
 
+        st.markdown("**Tavily research**")
         if tavily_configured:
-            st.caption(":green[● Tavily: enabled for inconclusive results]")
+            st.caption(":green[● Live for uncertain results]")
         else:
-            st.caption(":gray[● Tavily: no server key, external leads skipped]")
+            st.caption(":gray[● No server key · external leads skipped]")
+        st.caption(
+            "Finds public troubleshooting references when the data is uncertain."
+        )
 
-        st.caption(f"Model route: `{_model_label()}`")
+        st.divider()
+        st.markdown("### Deterministic decision layer")
+        st.caption(":green[● Python + DuckDB · always on]")
+        st.caption(
+            "Owns the baseline, coverage, contradictions, the six results, and "
+            "the safe next step."
+        )
 
 
 def _page_about() -> None:
-    st.title("A fab copilot that shows its evidence")
+    st.title("FabAgent: a manufacturing copilot with a focus on semiconductors")
     st.markdown(
-        "##### Turn a tool CSV into one defensible next step — with the "
-        "evidence, the contradiction, and the audit trail attached."
+        "##### Deterministic troubleshooting and root-cause analysis for "
+        "manufacturing and physical-AI operations, with a focus on semiconductor "
+        "fabs."
     )
-
-    _render_flow_diagram()
+    st.markdown(
+        "> **FabAgent turns a tool export into one defensible next step.** "
+        "NVIDIA Nemotron reasons over the evidence. Tavily adds public research "
+        "when the data is uncertain. Python checks every claim and owns the "
+        "result. The engineer decides."
+    )
 
     col1, col2, col3 = st.columns(3)
-    col1.markdown(
-        "**Deterministic gate**  \n"
-        "DuckDB statistics, evidence IDs, coverage, and contradictions decide "
-        "the result. The same input gives the same answer."
-    )
-    col2.markdown(
-        "**Bounded AI**  \n"
-        "Nemotron maps columns, proposes causes, and challenges the leader. It "
-        "sees a summary under 2 KB, never the raw telemetry."
-    )
-    col3.markdown(
-        "**Honest abstention**  \n"
-        "Missing data, a sensor conflict, or an unexplained movement becomes "
-        "**Data Incomplete**, **Sensors Disagree**, or **Needs Review** — not a guess."
-    )
+    with col1:
+        with st.container(border=True):
+            st.markdown("#### One safe next step")
+            st.caption(
+                "DuckDB statistics, evidence IDs, coverage, and contradictions "
+                "decide the result. The same input gives the same answer."
+            )
+    with col2:
+        with st.container(border=True):
+            st.markdown("#### NVIDIA Nemotron")
+            st.caption(
+                "Maps unknown columns, proposes causes, challenges the leading "
+                "cause, and writes the explanation. It sees a bounded summary "
+                "under 2 KB, never the raw telemetry."
+            )
+    with col3:
+        with st.container(border=True):
+            st.markdown("#### Tavily research")
+            st.caption(
+                "Finds public troubleshooting references when the data is "
+                "uncertain. Its leads are context for a human, never evidence "
+                "for the safety gate."
+            )
 
-    st.markdown("")
-    demo_col, how_col = st.columns([2, 1])
+    st.markdown("#### Start with a prepared case")
+    demo_col, conflict_col, how_col = st.columns(3)
     if demo_col.button(
-        "🚀 Try a demo (30 seconds)",
+        "🚀 Try a 30-second demo",
         type="primary",
-        use_container_width=True,
-        help="Run the public TEP feed-disturbance demo in one click.",
+        width="stretch",
+        help="Run a clean semiconductor coolant positive control in one click.",
     ):
         st.session_state["auto_run_demo"] = True
         st.session_state["demo_choice"] = RECOMMENDED_DEMO_KEY
         st.switch_page(_RUN_PAGE)
+    if conflict_col.button(
+        "See a sensor conflict",
+        width="stretch",
+        help=(
+            "Show an RF sensor that disagrees with its companions, plus live "
+            "Tavily research."
+        ),
+    ):
+        st.session_state["auto_run_demo"] = True
+        st.session_state["demo_choice"] = "synthetic_rf_veto"
+        st.switch_page(_RUN_PAGE)
     if how_col.button(
         "How it works",
-        use_container_width=True,
+        width="stretch",
     ):
         st.switch_page(_MODELS_PAGE)
 
@@ -1806,27 +1789,11 @@ def _page_about() -> None:
 def _page_models() -> None:
     st.title("How FabAgent works")
     st.markdown(
-        "##### One bounded model layer. One deterministic decision layer. "
-        "A human confirms the action."
+        "##### The technical path: NVIDIA Nemotron and Tavily reason over the "
+        "evidence, Python decides, and the engineer acts."
     )
 
-    _render_flow_diagram(detailed=True)
-
-    with st.expander("The technical division of labour", expanded=True):
-        st.markdown(
-            "| Layer | Owns | Cannot do |\n"
-            "|---|---|---|\n"
-            "| **Nemotron** | Column mapping, cause proposals, the disconfirming "
-            "challenge, the explanation | Choose the result, choose the action, "
-            "or invent evidence |\n"
-            "| **Python + DuckDB** | Baseline, evidence IDs, coverage, "
-            "contradictions, the six result words, the typed action | Invent "
-            "physics, units, or sensor names |\n"
-            "| **Tavily** | Public troubleshooting leads on uncertain results | "
-            "Change the gate or become evidence |\n"
-            "| **The engineer** | The tool model and the final action | Be "
-            "replaced by the model |\n"
-        )
+    _render_flow_diagram()
 
     _render_markdown_file(_MODELS_DOC)
 
@@ -1834,22 +1801,16 @@ def _page_models() -> None:
     st.subheader("Current server configuration")
     rows: list[dict[str, object]] = [
         {
-            "service": "NVIDIA Nemotron (Nebius Token Factory)",
-            "route": _model_label(),
-            "status": (
-                "configured on server (Live calls)"
-                if _server_has_key("NEBIUS_API_KEY")
-                else "not configured — offline fixture"
-            ),
+            "Layer": "NVIDIA Nemotron (Nebius Token Factory)",
+            "Role": "Mapping, cause finding, challenge, explanation",
         },
         {
-            "service": "Tavily Web Search",
-            "route": "public technical search",
-            "status": (
-                "configured on server"
-                if _server_has_key("TAVILY_API_KEY")
-                else "not configured — search skipped"
-            ),
+            "Layer": "Tavily research",
+            "Role": "Public troubleshooting leads on uncertain results",
+        },
+        {
+            "Layer": "Python + DuckDB",
+            "Role": "Deterministic decision, coverage, and safe action",
         },
     ]
     _table(rows)
@@ -1858,72 +1819,460 @@ def _page_models() -> None:
     _render_markdown_file(_YAML_DOC)
 
 
-def _load_benchmark_summary() -> list[dict[str, object]]:
+def _load_benchmark_payload() -> dict[str, object] | None:
     """Read the newest committed naive-LLM summary, if one exists."""
     for path in sorted(_RESULTS_DIR.glob(_BENCHMARK_SUMMARY_GLOB), reverse=True):
         try:
             payload = cast(object, json.loads(path.read_text(encoding="utf-8")))
         except (OSError, json.JSONDecodeError):
             continue
-        rows = presentation.benchmark_summary_rows(payload)
-        if rows:
-            return rows
-    return []
-
-
-def _load_baseline_counts() -> tuple[int, int] | None:
-    path = _RESULTS_DIR / "naive_llm_baseline.json"
-    try:
-        payload = cast(object, json.loads(path.read_text(encoding="utf-8")))
-    except (OSError, json.JSONDecodeError):
-        return None
-    if not isinstance(payload, dict):
-        return None
-    data = cast(dict[str, object], payload)
-    safe = data.get("safe_decisions")
-    total = data.get("total_cases")
-    if (
-        isinstance(safe, int)
-        and not isinstance(safe, bool)
-        and isinstance(total, int)
-        and not isinstance(total, bool)
-    ):
-        return safe, total
+        if isinstance(payload, dict):
+            return cast(dict[str, object], payload)
     return None
+
+
+def _load_head_to_head() -> dict[str, object] | None:
+    """Read the newest matched head-to-head artifact, if one exists."""
+    for path in sorted(_RESULTS_DIR.glob(_HEAD_TO_HEAD_GLOB), reverse=True):
+        try:
+            payload = cast(object, json.loads(path.read_text(encoding="utf-8")))
+        except (OSError, json.JSONDecodeError):
+            continue
+        if isinstance(payload, dict):
+            return cast(dict[str, object], payload)
+    return None
+
+
+_SYSTEM_PROVIDERS = {
+    "FabAgent (deterministic gate)": "fabagent",
+    "Nemotron-only (evidence track)": "nebius",
+    "Gemini 3.8 Flash (medium)": "gemini",
+    "GPT-5.6 Luna": "openai",
+}
+
+
+class _ProviderStats(TypedDict):
+    n: int
+    unsafe: int
+    cause_ok: int
+    cause_n: int
+    abst_ok: int
+    abst_n: int
+    false_alarm: int
+    false_alarm_n: int
+    evidence: float | None
+
+
+def _system_provider(system: str) -> str | None:
+    if system in _SYSTEM_PROVIDERS:
+        return _SYSTEM_PROVIDERS[system]
+    lowered = system.casefold()
+    if "gemini" in lowered:
+        return "gemini"
+    if "gpt" in lowered or "chatgpt" in lowered:
+        return "openai"
+    if "nemotron-only" in lowered:
+        return "nebius"
+    if "fabagent" in lowered:
+        return "fabagent"
+    return None
+
+
+def _display_system(system: str) -> str:
+    if system == "FabAgent (deterministic gate)":
+        return "FabAgent"
+    if system == "Nemotron-only (evidence track)":
+        return "Nemotron-only (no Python gate)"
+    return system
+
+
+def _provider_stats(
+    records: Sequence[Mapping[str, object]], provider: str
+) -> _ProviderStats | None:
+    subset = [
+        record
+        for record in records
+        if str(record.get("provider", "")) == provider
+    ]
+    if not subset:
+        return None
+    unsafe = sum(1 for record in subset if record.get("unsafe") is True)
+    cause_scored = [
+        record for record in subset if record.get("correct_cause") is not None
+    ]
+    cause_ok = sum(
+        1 for record in cause_scored if record.get("correct_cause") is True
+    )
+    abst_scored = [
+        record
+        for record in subset
+        if record.get("appropriate_abstention") is not None
+    ]
+    abst_ok = sum(
+        1
+        for record in abst_scored
+        if record.get("appropriate_abstention") is True
+    )
+    false_alarm_scored = [
+        record for record in subset if record.get("false_alarm") is not None
+    ]
+    false_alarm = sum(
+        1 for record in false_alarm_scored if record.get("false_alarm") is True
+    )
+    evidence_values: list[float] = []
+    for record in subset:
+        value = record.get("evidence_accuracy")
+        if isinstance(value, (int, float)) and not isinstance(value, bool):
+            evidence_values.append(float(value))
+    return {
+        "n": len(subset),
+        "unsafe": unsafe,
+        "cause_ok": cause_ok,
+        "cause_n": len(cause_scored),
+        "abst_ok": abst_ok,
+        "abst_n": len(abst_scored),
+        "false_alarm": false_alarm,
+        "false_alarm_n": len(false_alarm_scored),
+        "evidence": (
+            sum(evidence_values) / len(evidence_values)
+            if evidence_values
+            else None
+        ),
+    }
+
+
+def _metric_text(
+    numerator: int, denominator: int, tone: str | None
+) -> str:
+    if denominator <= 0:
+        return presentation.MISSING
+    text = f"{numerator}/{denominator} ({numerator / denominator:.0%})"
+    return f":{tone}[**{text}**]" if tone is not None else text
+
+
+def _benchmark_display_rows(
+    rows: Sequence[Mapping[str, object]],
+    case_records: Sequence[Mapping[str, object]] = (),
+    *,
+    include_false_alarm: bool = False,
+) -> list[dict[str, object]]:
+    display: list[dict[str, object]] = []
+    for row in rows:
+        raw_system = str(row.get("system", presentation.MISSING))
+        provider = _system_provider(raw_system)
+        system = _display_system(raw_system)
+        item = (
+            _provider_stats(case_records, provider)
+            if provider is not None
+            else None
+        )
+        n = item["n"] if item is not None else 0
+        unsafe = item["unsafe"] if item is not None else 0
+        cause_ok = item["cause_ok"] if item is not None else 0
+        cause_n = item["cause_n"] if item is not None else 0
+        abst_ok = item["abst_ok"] if item is not None else 0
+        abst_n = item["abst_n"] if item is not None else 0
+        evidence = (
+            item["evidence"]
+            if item is not None and item["evidence"] is not None
+            else row.get("evidence_accuracy")
+        )
+        evidence_text = presentation.MISSING
+        if isinstance(evidence, (int, float)) and not isinstance(evidence, bool):
+            evidence_text = f"{float(evidence):.0%}"
+            evidence_tone = (
+                "green"
+                if float(evidence) >= 0.99
+                else ("red" if float(evidence) < 0.7 else "orange")
+            )
+            evidence_text = f":{evidence_tone}[**{evidence_text}**]"
+        cause_tone = (
+            "green"
+            if cause_n > 0 and cause_ok == cause_n
+            else ("red" if cause_ok == 0 else "orange")
+        )
+        abst_tone = (
+            "green"
+            if abst_n > 0 and abst_ok == abst_n
+            else ("red" if abst_ok == 0 else "orange")
+        )
+        display_row: dict[str, object] = {
+            "System": system,
+            "Unsafe actions": _metric_text(
+                unsafe, n, "green" if unsafe == 0 else "red"
+            ),
+            "Correct cause": _metric_text(cause_ok, cause_n, cause_tone),
+            "Appropriate abstention": _metric_text(
+                abst_ok, abst_n, abst_tone
+            ),
+            "Evidence accuracy": evidence_text,
+        }
+        if include_false_alarm:
+            false_alarm = item["false_alarm"] if item is not None else 0
+            false_alarm_n = (
+                item["false_alarm_n"] if item is not None else 0
+            )
+            display_row["False alarm"] = _metric_text(
+                false_alarm,
+                false_alarm_n,
+                "green" if false_alarm == 0 else "red",
+            )
+        display.append(display_row)
+    return display
+
+
+def _head_to_head_track(
+    payload: Mapping[str, object], track: str
+) -> dict[str, object] | None:
+    tracks = payload.get("tracks")
+    if not isinstance(tracks, dict):
+        return None
+    data = cast(dict[str, object], tracks).get(track)
+    if not isinstance(data, dict):
+        return None
+    return cast(dict[str, object], data)
+
+
+def _track_table_data(
+    track: Mapping[str, object],
+) -> tuple[list[dict[str, object]], list[Mapping[str, object]]]:
+    systems = track.get("systems")
+    rows = (
+        presentation.benchmark_summary_rows(
+            {"systems": cast(list[object], systems)}
+        )
+        if isinstance(systems, list)
+        else []
+    )
+    raw_cases = track.get("cases")
+    case_records: list[Mapping[str, object]] = []
+    if isinstance(raw_cases, list):
+        for item in cast(list[object], raw_cases):
+            if isinstance(item, dict):
+                case_records.append(cast(dict[str, object], item))
+    return rows, case_records
+
+
+def _head_to_head_case_rows(
+    track: Mapping[str, object],
+) -> list[dict[str, object]]:
+    raw_cases = track.get("cases")
+    if not isinstance(raw_cases, list):
+        return []
+    by_key: dict[tuple[str, str], dict[str, object]] = {}
+    for item in cast(list[object], raw_cases):
+        if not isinstance(item, dict):
+            continue
+        record = cast(dict[str, object], item)
+        case_id = record.get("case")
+        provider = record.get("provider")
+        if isinstance(case_id, str) and isinstance(provider, str):
+            by_key[(case_id, provider)] = record
+    rows: list[dict[str, object]] = []
+    providers = (
+        ("FabAgent", "fabagent"),
+        ("Gemini 3.8 Flash", "gemini"),
+        ("GPT-5.6 Luna", "openai"),
+    )
+    for case_id, label in _CASE_LABELS.items():
+        if not any((case_id, provider) in by_key for _, provider in providers):
+            continue
+        row: dict[str, object] = {"Case": label}
+        for column, provider in providers:
+            record = by_key.get((case_id, provider))
+            if record is None:
+                row[column] = presentation.MISSING
+                continue
+            action = str(record.get("action", ""))
+            text = _BENCHMARK_ACTION_LABELS.get(
+                action, action or presentation.MISSING
+            )
+            if record.get("unsafe") is True:
+                text = f":red[**{text}**]"
+            row[column] = text
+        rows.append(row)
+    return rows
+
+
+def _total_sentence(
+    rows: Sequence[Mapping[str, object]],
+    case_records: Sequence[Mapping[str, object]],
+) -> str:
+    parts: list[str] = []
+    for row in rows:
+        raw_system = str(row.get("system", presentation.MISSING))
+        system = _display_system(raw_system)
+        provider = _system_provider(raw_system)
+        if provider is None:
+            continue
+        stats = _provider_stats(case_records, provider)
+        if stats is None:
+            continue
+        parts.append(
+            f"{system}: {stats['n'] - stats['unsafe']}/{stats['n']} safe, "
+            f"{stats['cause_ok']}/{stats['cause_n']} correct causes"
+        )
+    return "; ".join(parts)
 
 
 def _page_performance() -> None:
     _render_markdown_file(_PERFORMANCE_DOC)
-    st.divider()
-    rows = _load_benchmark_summary()
-    if rows:
-        st.subheader("Measured results")
-        _table(rows)
-        st.caption(
-            "Measured on the fixed case set with the neutral prompt and the same "
-            "action menu for every system. This is not field accuracy."
+    head = _load_head_to_head()
+    if head is None:
+        st.subheader("Benchmark in progress")
+        st.info(
+            "The fair benchmark has not produced a committed summary yet. No "
+            "chart or percentage is shown until it does."
         )
         return
-    st.subheader("Benchmark in progress")
+
+    st.markdown("### Datasets evaluated")
+    dataset_columns = st.columns(3)
+    with dataset_columns[0]:
+        with st.container(border=True):
+            st.markdown("#### Synthetic twin")
+            st.caption(
+                "**What it is:** a seeded simulator with an injected fault and "
+                "recorded expected sensor consequences."
+            )
+            st.caption(
+                "**Why it matters:** the right answer is written down before "
+                "FabAgent runs."
+            )
+            st.caption(
+                "**What it proves:** whether the system recovers the injected "
+                "cause or abstains."
+            )
+    with dataset_columns[1]:
+        with st.container(border=True):
+            st.markdown("#### PHM 2018 — ion mill")
+            st.caption(
+                "**What it is:** real ion-mill telemetry with a published "
+                "coolant-fault label."
+            )
+            st.caption(
+                "**Why it matters:** a real equipment export with a documented "
+                "fault."
+            )
+            st.caption(
+                "**What it proves:** equipment-subsystem reasoning and "
+                "contradiction handling."
+            )
+    with dataset_columns[2]:
+        with st.container(border=True):
+            st.markdown("#### TEP — chemical reactor")
+            st.caption(
+                "**What it is:** a public chemical-reactor simulation with known "
+                "disturbance IDs."
+            )
+            st.caption(
+                "**Why it matters:** a second known-answer set with a cause and "
+                "a symptom."
+            )
+            st.caption(
+                "**What it proves:** cause-vs-symptom reasoning and abstention."
+            )
     st.info(
-        "The fair benchmark has not produced a committed summary yet. No chart "
-        "or percentage is shown until it does. The protocol is in "
-        "`docs/EVALUATION.md`."
+        "**How we know the answer:** the synthetic fault and expected "
+        "consequences were recorded before the run; PHM and TEP labels are "
+        "published with the datasets. These known-answer tests prove the decision "
+        "pattern; field accuracy needs a real fab pilot."
     )
-    counts = _load_baseline_counts()
-    if counts is not None:
-        safe, total = counts
-        st.markdown("**Only measured baseline so far**")
+
+    evidence = _head_to_head_track(head, "evidence")
+    raw = _head_to_head_track(head, "raw")
+
+    if evidence is not None:
+        rows, records = _track_table_data(evidence)
+        if rows:
+            st.subheader("Benchmark 1 — FabAgent vs frontier LLM (only prompts)")
+            _table(_benchmark_display_rows(rows, records))
+            totals = _total_sentence(rows, records)
+            if totals:
+                st.caption(f"**Totals:** {totals}.")
+            st.caption(
+                "Four completed cases. The models receive the same neutral "
+                "prompt and bounded evidence summary. Cause is scored only where "
+                "the dataset defines a cause; the PHM coolant case tests coverage "
+                "and abstention."
+            )
+            case_rows = _head_to_head_case_rows(evidence)
+            if case_rows:
+                st.markdown("#### What each model recommended")
+                _table(case_rows)
+
+    if raw is not None:
+        rows, records = _track_table_data(raw)
+        if rows:
+            st.subheader(
+                "Benchmark 2 — FabAgent vs frontier LLM (prompt + raw CSV data)"
+            )
+            _table(_benchmark_display_rows(rows, records))
+            totals = _total_sentence(rows, records)
+            if totals:
+                st.caption(f"**Totals:** {totals}.")
+            st.caption(
+                "Same four completed cases, with the raw CSV attached. This "
+                "tests column reading and mapping as well as the decision."
+            )
+
+    payload = _load_benchmark_payload()
+    summary_rows = presentation.benchmark_summary_rows(payload) if payload else []
+    ablation = [
+        row
+        for row in summary_rows
+        if str(row.get("system", "")).startswith(("FabAgent", "Nemotron-only"))
+    ]
+    ablation_records: list[Mapping[str, object]] = []
+    raw_cases = payload.get("cases") if payload is not None else None
+    if isinstance(raw_cases, list):
+        for item in cast(list[object], raw_cases):
+            if isinstance(item, dict):
+                ablation_records.append(cast(dict[str, object], item))
+    if ablation:
+        st.subheader(
+            "Benchmark 3 — FabAgent workflow vs Nemotron-only (same model, "
+            "same evidence)"
+        )
         _table(
-            [
-                {
-                    "System": "Nemotron-only (no Python gate)",
-                    "Safe decisions": f"{safe}/{total}",
-                    "Note": "One small synthetic safety set; not a broad comparison.",
-                }
-            ]
+            _benchmark_display_rows(
+                ablation, ablation_records, include_false_alarm=True
+            )
+        )
+        totals = _total_sentence(ablation, ablation_records)
+        if totals:
+            st.caption(f"**Totals:** {totals}.")
+        st.caption(
+            "Eight complete cases. The same model and bounded evidence, but "
+            "FabAgent also receives the saved tool-model checks and the Python "
+            "gate. This is a workflow comparison, not a pure gate ablation. "
+            "Seven cases have a scored cause; the PHM coolant case is the "
+            "coverage case."
         )
 
+    st.markdown("### What this shows")
+    st.markdown(
+        "- **FabAgent is the only system that is both safe and correct.** It has "
+        "zero unsafe actions and the correct cause on every scored case.\n"
+        "- **Gemini's unsafe call is on missing data.** It recommends inspecting "
+        "the physical part when a required coolant-flow channel is absent — the "
+        "exact failure the gate prevents.\n"
+        "- **GPT-5.6 is safe by not committing.** It recommends the same cautious "
+        "action repeatedly and gets only the missing-channel `unknown` case "
+        "right; it misses the feed disturbance and the RF conflict.\n"
+        "- **The risk is two-sided:** one model acts on incomplete data, while "
+        "the other never solves attribution. FabAgent does neither.\n"
+        "- **The workflow is the difference:** with the same Nemotron model and "
+        "the same evidence, saved checks plus the gate turn 6/8 safe into 8/8 "
+        "safe and remove the false alarm on the healthy run. Because the naive "
+        "arm does not receive the saved checks, this is a workflow comparison, "
+        "not a pure gate ablation."
+    )
+    st.caption(
+        "Known-answer tests and a workflow comparison. Field accuracy needs a "
+        "real fab pilot with engineer-confirmed outcomes. The naive models did "
+        "not receive the saved tool-model checks."
+    )
 
 def _page_contact() -> None:
     _render_markdown_file(_CONTACT_DOC)
@@ -1933,7 +2282,8 @@ def _page_run() -> None:
     st.title("Run a troubleshooting case")
     st.caption(
         "FabAgent checks whether tool telemetry is statistically reliable "
-        "before suggesting what to do."
+        "before suggesting what to do. Bring a CSV export from any manufacturing "
+        "tool; semiconductor fabs are the first target."
     )
 
     source = st.segmented_control(
@@ -1964,7 +2314,12 @@ def _page_run() -> None:
     result = st.session_state.get("result")
     if isinstance(result, RunResult):
         st.divider()
-        st.markdown("### Step 3 — Review the result")
+        st.markdown("### Step 3 — Decision and evidence")
+        st.caption(
+            "Python has already computed the decision. The tabs below show the "
+            "telemetry evidence, the NVIDIA Nemotron explanation, and Tavily "
+            "research leads; none of them can change the result."
+        )
         _render_result(result)
 
 
@@ -2017,13 +2372,13 @@ def main() -> None:
             "Evidence & Proof": [
                 st.Page(
                     _page_performance,
-                    title="FabAgent vs naive LLM",
+                    title="FabAgent vs frontier LLM",
                     icon=":material/compare_arrows:",
                     url_path="performance",
                 ),
                 st.Page(
                     _page_contact,
-                    title="Contact & Team",
+                    title="Project & contact",
                     icon=":material/mail:",
                     url_path="contact",
                 ),

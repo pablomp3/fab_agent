@@ -12,6 +12,7 @@ __pycache__/
 .env.*
 !.env.example
 .streamlit/secrets.toml
+DEPLOY_VM_RUNBOOK.md
 
 # Private evaluation answers and large raw datasets
 benchmarks/evaluator/ground_truths/
@@ -20,5 +21,6 @@ benchmarks/datasets/phm2018/processed/
 benchmarks/datasets/tep/raw/
 benchmarks/datasets/tep/processed/
 
-# Local archive of superseded docs (never commit)
+# Local benchmark kits and superseded docs (never commit)
 .archive/
+benchmarks/evaluator/naive_llm_runbooks/

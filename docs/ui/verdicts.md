@@ -11,7 +11,7 @@ FabAgent answers one question:
 | **Sensors Disagree** | `[🟡 SENSORS DISAGREE]` | One signal moved, but the signals that should agree did not. This usually points to a sensor or calibration problem. | Check the sensor first; do not change the recipe. |
 | **Data Incomplete** | `[⚠️ DATA INCOMPLETE]` | A required signal is missing from the export. The fault cannot be judged. | Get the missing data. |
 | **Needs Review** | `[🟠 NEEDS REVIEW]` | The data is not enough to confirm or rule out a cause, or an unexplained anomaly is present. | Ask an engineer to review. |
-| **Unknown Machine** | `[⚪ UNKNOWN MACHINE]` | The export does not match a saved tool model. The columns were guessed. | Review the guessed columns and save a tool model. |
+| **Unknown Machine** | `[⚪ UNKNOWN MACHINE]` | The export does not match a saved tool model. The columns were guessed. | Review the guessed columns and download the draft. |
 
 Optional small badge: **AI explanation unavailable** — the model call failed, but
 the Python result still ran.

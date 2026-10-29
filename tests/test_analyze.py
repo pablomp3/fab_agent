@@ -24,7 +24,7 @@ _UNKNOWN_EXPORT = (
 
 
 class AnalyzeCsvTests(unittest.TestCase):
-    def _run(self, text: str) -> RunResult:
+    def _run(self, text: str, *, force_experimental: bool = False) -> RunResult:
         transport = ExperimentalEchoTransport()
         with TemporaryDirectory() as temp_dir:
             path = Path(temp_dir) / "export.csv"
@@ -34,6 +34,7 @@ class AnalyzeCsvTests(unittest.TestCase):
                 "flowcool" if "FLOWCOOL" in text else "unknown tool",
                 engine_factory=offline_engine_factory(transport),
                 mapping_factory=offline_mapping_factory(transport),
+                force_experimental=force_experimental,
             )
 
     def test_matching_schema_stays_on_the_safe_path(self) -> None:
@@ -41,6 +42,12 @@ class AnalyzeCsvTests(unittest.TestCase):
         self.assertEqual(result.mode, "safe")
         self.assertFalse(result.fallback_used)
         self.assertIs(result.outcome, AnalysisOutcome.ANALYSIS_SUPPORTED)
+
+    def test_force_experimental_bypasses_a_matching_saved_model(self) -> None:
+        result = self._run(_PHM_EXPORT, force_experimental=True)
+        self.assertEqual(result.mode, "experimental")
+        self.assertTrue(result.fallback_used)
+        self.assertIsNotNone(result.mapping)
 
     def test_unknown_schema_falls_back_to_experimental(self) -> None:
         result = self._run(_UNKNOWN_EXPORT)

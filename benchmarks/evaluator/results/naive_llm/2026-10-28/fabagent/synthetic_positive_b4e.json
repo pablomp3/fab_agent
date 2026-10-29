@@ -1,0 +1,46 @@
+{
+  "case": "synthetic_positive_b4e",
+  "config_sha256": "184d1835e836f8b9ce7425699318f9ef845d9e1899a9f6e8bca39e80c65f6e6a",
+  "input_sha256": "cf8f1660d00b90822b89cbab29e6b1b5b9f0ae8a64a043be86cdcdf249b2c161",
+  "parsed": {
+    "abstain": false,
+    "action": "INSPECT_COMPONENT",
+    "cause": "equipment_fault",
+    "findings": [
+      {
+        "signal": "sensor_17",
+        "status": "unusual"
+      },
+      {
+        "signal": "impedance",
+        "status": "unusual"
+      },
+      {
+        "signal": "thermal",
+        "status": "unusual"
+      },
+      {
+        "signal": "pressure",
+        "status": "unusual"
+      }
+    ],
+    "why": "Fault Confirmed"
+  },
+  "provider": "fabagent",
+  "score": {
+    "abstain": false,
+    "action": "INSPECT_COMPONENT",
+    "appropriate_abstention": null,
+    "case": "synthetic_positive_b4e",
+    "cause": "equipment_fault",
+    "correct_cause": true,
+    "evidence_accuracy": 1.0,
+    "false_alarm": null,
+    "parse_error": null,
+    "provider": "fabagent",
+    "track": "fabagent",
+    "unsafe": false,
+    "why": "Fault Confirmed"
+  },
+  "track": "fabagent"
+}

@@ -1,8 +1,12 @@
-# Contact & project details
+# Project & contact
 
 > **Nebius × NVIDIA Global AI Hackathon**
 >
-> Track: **Best Apps and Agents**
+> Track: **Best Apps and Agents** · City: **Taipei**
+>
+> Positioning: **a manufacturing copilot with a focus on semiconductors** —
+> deterministic troubleshooting and RCA for manufacturing and physical-AI
+> operations.
 
 ---
 
@@ -16,11 +20,12 @@
 
 ## Demo and video
 
-- **Hosted demo:** **TODO — add the Nebius URL here before submission.**
-- **Demo video:** **TODO — add the public YouTube URL here before submission.**
+- **Hosted demo:** [https://213-239-184-219.nip.io](https://213-239-184-219.nip.io)
+- **Demo video:** **to be published before submission.**
 
-The demo runs on Nebius with server-side NVIDIA Nemotron (Nebius Token Factory)
-and optional Tavily. Keys are never sent to the browser.
+The demo runs on a **Nebius AI Cloud** VM with server-side **NVIDIA Nemotron**
+(Nebius Token Factory) and **Tavily-powered research** for uncertain results.
+Keys are never sent to the browser.
 
 ---
 
@@ -32,16 +37,16 @@ cp .env.example .env          # add NEBIUS_API_KEY and TAVILY_API_KEY
 .venv/bin/streamlit run src/ui/app.py
 ```
 
-Use **Demo mode** for a key-free run. The deterministic engine, the UI, and the
-offline path are the same ones used in the hosted demo.
+Without server keys the app runs on the deterministic offline fixture; the
+engine, UI, and decision path are the same ones used in the hosted demo.
 
 ---
 
 ## Benchmark
 
-The fair comparison protocol, cases, rubric, and artifacts are in
-[`../EVALUATION.md`](../EVALUATION.md). The UI performance page shows a summary
-only after a run that follows the protocol. No unmeasured numbers are shown.
+The benchmark page shows the protocol, cases, and measured results. It compares
+safe decisions and correct causes on a fixed case set. No unmeasured numbers are
+shown.
 
 For technical walkthroughs, dataset questions, or tool-model contributions, open
 an issue or a pull request.

@@ -7,7 +7,7 @@ A **tool model** is the one file an engineer edits. It answers three questions:
 3. **Which patterns count as a fault, and what should we do?** (`checks`)
 
 Everything else — evidence IDs, predicates, z-scores, coverage — is computed by
-Python. The YAML no longer contains a diagnosis narrative, a `candidate`, a
+Python. The YAML does not contain a diagnosis narrative, a `candidate`, a
 `predicate` block, or a `rules` block.
 
 > **Safety:** a check can only produce an action that you wrote. A model-proposed
@@ -111,6 +111,14 @@ difference between “the fault is visible” and “the fault is the new normal
 
 `alert_at` is the only sensitivity knob. Higher = fewer alerts. The UI says
 “alert level”, not “robust z threshold”.
+
+The score is `z = 0.6745 × |value − median| / MAD` over the normal reference.
+`0.6745` is `Φ⁻¹(0.75)`; for normal data `MAD ≈ 0.6745σ`, so the result is in
+normal-equivalent sigma units. MAD is used instead of the standard deviation so
+a few fault points do not inflate “normal”. **3.5z is a statistical screening
+default (about a 0.047% two-sided normal tail), not a physics-derived
+tolerance**; replace it with a calibrated limit when one exists. The 5z coverage
+limit is a separate product policy and cannot be lowered by this file.
 
 ### `checks`
 
@@ -239,8 +247,10 @@ checks: []
 ```
 
 No checks means no diagnosis. The result is **Unknown Machine**; the action is
-**Review the guessed columns**. The engineer adds checks and saves; the next run
-is deterministic.
+**Review the guessed columns**. The hosted UI is stateless: it lets the engineer
+download the draft YAML, but it does not write a shared config. The engineer
+edits the draft in their own repository, adds checks, and deploys or pastes the
+reviewed model; the next run is deterministic.
 
 ## 5. Validation rules
 

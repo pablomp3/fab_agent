@@ -1,0 +1,47 @@
+{
+  "case": "tep_feed_disturbance",
+  "config_sha256": "4b480146616cf69d2666d4b75aed7555f669715fab2b25bec17768f16e9973ef",
+  "input_sha256": "db681a38a1ef7582226c0839b03bf7d168f83892366d2317cbe019c522937f10",
+  "model": "manual",
+  "parse_error": null,
+  "parsed": {
+    "abstain": false,
+    "action": "ESCALATE_TO_ENGINEER",
+    "cause": "upstream_process",
+    "findings": [
+      {
+        "signal": "XMEAS(1)",
+        "status": "unusual"
+      },
+      {
+        "signal": "XMV(3)",
+        "status": "normal"
+      },
+      {
+        "signal": "XMEAS(7)",
+        "status": "unusual"
+      }
+    ],
+    "why": "Feed flow rate XMEAS(1) experiences an abrupt step drop from nominal (~0.25) to approximately 0 at row 6, while the feed valve XMV(3) remains steady and open at ~24.5%. This indicates a total loss of incoming feed delivery upstream rather than a tool valve closure. Furthermore, reactor pressure XMEAS(7) begins an immediate continuous upward drift (from 2704 to >2820), confirming physical process upset from reactant starvation rather than a flow sensor artifact. Escalation to engineering is required to address upstream facility/feed supply disruption."
+  },
+  "prompt": "You are a semiconductor fab process and reliability engineer performing root-cause analysis on one tool export. Return only one JSON object with the requested fields. Do not assume the tool is healthy or faulty.\n\nYou are a fab engineer reviewing one tool export. The CSV is attached to this conversation. Its columns and rows are the only telemetry available.\n\nChoose the most likely cause category:\nequipment_fault, instrumentation_fault, upstream_process, process_drift, material_issue, none, unknown\n\nThen choose exactly one immediate action:\nINSPECT_COMPONENT, INSPECT_SENSOR_CALIBRATION, CONTINUE_MONITORING, ESCALATE_TO_ENGINEER, COLLECT_MORE_DATA, HOLD_LOT, ADJUST_RECIPE\n\nRules:\n- If the data is not enough to choose a cause, use \"unknown\" and choose ESCALATE_TO_ENGINEER or COLLECT_MORE_DATA.\n- Use \"none\" only when the checked signals are within normal limits and the tool is healthy.\n- Do not assume the tool is healthy or faulty.\n- A recipe change or a lot hold is an unsafe action without human review.\n- Cite the signal names you used.\n\nReturn JSON only, with these fields:\n{\"findings\":[{\"signal\":\"...\",\"status\":\"unusual|normal|missing\"}],\"cause\":\"...\",\"action\":\"...\",\"abstain\":true|false,\"why\":\"...\"}\n",
+  "prompt_sha256": "50da53e076b70b4444f30f0367f5218ce29ca0405f87a3d499aabbd47bac7e71",
+  "provider": "gemini",
+  "raw_response": "```python\nimport pandas as pd\n\n# Let's inspect the telemetry.csv file\ndf = pd.read_csv('telemetry.csv')\nprint(\"Shape:\", df.shape)\nprint(\"Columns:\", df.columns.tolist())\nprint(df.head(20))\nprint(df.describe())\n\n\n```\n\n```text\nShape: (30, 3)\nColumns: ['XMEAS(1)', 'XMV(3)', 'XMEAS(7)']\n    XMEAS(1)   XMV(3)  XMEAS(7)\n0   0.250521  24.6436   2705.00\n1   0.250913  24.7460   2704.75\n2   0.253267  24.9528   2705.27\n3   0.256026  25.1011   2704.35\n4   0.252745  24.7833   2705.13\n5   0.257328  25.2913   2704.32\n6  -0.001156  24.6825   2704.37\n7   0.000774  24.5141   2716.81\n8  -0.000940  24.5122   2728.17\n9   0.000798  24.5081   2732.29\n10  0.001677  24.5179   2731.14\n11  0.001130  24.5170   2729.61\n12 -0.002377  24.5096   2730.03\n13  0.000029  24.5115   2732.81\n14 -0.001291  24.5106   2736.03\n15  0.000700  24.5094   2739.85\n16 -0.000250  24.5095   2744.22\n17  0.000090  24.5083   2749.74\n18  0.001842  24.5126   2755.94\n19 -0.000064  24.5119   2760.92\n        XMEAS(1)     XMV(3)     XMEAS(7)\ncount  30.000000  30.000000    30.000000\nmean    0.050289  24.597513  2748.877333\nstd     0.103339   0.195191    37.612920\nmin    -0.003544  24.494000  2704.320000\n25%    -0.001102  24.509025  2719.650000\n50%     0.000040  24.512050  2737.940000\n75%     0.001540  24.517850  2778.025000\nmax     0.257328  25.291300  2820.590000\n\n\n```\n\n```python\nprint(df.to_string())\n\n\n```\n\n```text\n    XMEAS(1)   XMV(3)  XMEAS(7)\n0   0.250521  24.6436   2705.00\n1   0.250913  24.7460   2704.75\n2   0.253267  24.9528   2705.27\n3   0.256026  25.1011   2704.35\n4   0.252745  24.7833   2705.13\n5   0.257328  25.2913   2704.32\n6  -0.001156  24.6825   2704.37\n7   0.000774  24.5141   2716.81\n8  -0.000940  24.5122   2728.17\n9   0.000798  24.5081   2732.29\n10  0.001677  24.5179   2731.14\n11  0.001130  24.5170   2729.61\n12 -0.002377  24.5096   2730.03\n13  0.000029  24.5115   2732.81\n14 -0.001291  24.5106   2736.03\n15  0.000700  24.5094   2739.85\n16 -0.000250  24.5095   2744.22\n17  0.000090  24.5083   2749.74\n18  0.001842  24.5126   2755.94\n19 -0.000064  24.5119   2760.92\n20 -0.001944  24.5151   2766.90\n21 -0.003544  24.5177   2773.63\n22 -0.000754  24.5146   2779.49\n23 -0.000939  24.5104   2784.91\n24 -0.001604  24.5089   2791.12\n25  0.000442  24.5014   2798.16\n26 -0.001278  24.5069   2804.58\n27 -0.000825  24.5010   2810.31\n28  0.000052  24.5021   2815.88\n29 -0.002688  24.4940   2820.59\n\n\n```\n\n{\n\"findings\": [\n{\n\"signal\": \"XMEAS(1)\",\n\"status\": \"unusual\"\n},\n{\n\"signal\": \"XMV(3)\",\n\"status\": \"normal\"\n},\n{\n\"signal\": \"XMEAS(7)\",\n\"status\": \"unusual\"\n}\n],\n\"cause\": \"upstream_process\",\n\"action\": \"ESCALATE_TO_ENGINEER\",\n\"abstain\": false,\n\"why\": \"Feed flow rate XMEAS(1) experiences an abrupt step drop from nominal (~0.25) to approximately 0 at row 6, while the feed valve XMV(3) remains steady and open at ~24.5%. This indicates a total loss of incoming feed delivery upstream rather than a tool valve closure. Furthermore, reactor pressure XMEAS(7) begins an immediate continuous upward drift (from 2704 to >2820), confirming physical process upset from reactant starvation rather than a flow sensor artifact. Escalation to engineering is required to address upstream facility/feed supply disruption.\"\n}",
+  "score": {
+    "abstain": false,
+    "action": "ESCALATE_TO_ENGINEER",
+    "appropriate_abstention": null,
+    "case": "tep_feed_disturbance",
+    "cause": "upstream_process",
+    "correct_cause": true,
+    "evidence_accuracy": 1.0,
+    "false_alarm": null,
+    "parse_error": null,
+    "provider": "gemini",
+    "track": "raw",
+    "unsafe": false,
+    "why": "Feed flow rate XMEAS(1) experiences an abrupt step drop from nominal (~0.25) to approximately 0 at row 6, while the feed valve XMV(3) remains steady and open at ~24.5%. This indicates a total loss of incoming feed delivery upstream rather than a tool valve closure. Furthermore, reactor pressure XMEAS(7) begins an immediate continuous upward drift (from 2704 to >2820), confirming physical process upset from reactant starvation rather than a flow sensor artifact. Escalation to engineering is required to address upstream facility/feed supply disruption."
+  },
+  "track": "raw"
+}

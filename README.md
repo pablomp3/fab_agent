@@ -1,6 +1,14 @@
 # FabAgent
 
-**An evidence-gated troubleshooting copilot for semiconductor tools.**
+**A deterministic troubleshooting and RCA copilot for manufacturing and
+physical-AI operations, with a focus on semiconductor fabs.**
+
+> **Nebius × NVIDIA Global AI Hackathon — Best Apps and Agents Track**
+>
+> **Live demo:** <https://213-239-184-219.nip.io> · **City award:** Taipei
+>
+> Deployed on a **Nebius AI Cloud** VM, powered by **NVIDIA Nemotron** served
+> through **Nebius Token Factory**, with **Tavily** research at runtime.
 
 FabAgent reads a tool’s sensor CSV, builds a normal reference, turns the readings
 into evidence records, and checks them against a short, engineer-editable tool
@@ -10,16 +18,15 @@ Behavior**, **Sensors Disagree**, **Data Incomplete**, **Needs Review**, or
 
 The rule is simple:
 
-> **Nemotron proposes and challenges. Python checks. The engineer decides.**
+> **NVIDIA Nemotron reasons. Tavily researches. Python checks. The engineer decides.**
 
 A human always confirms the action. FabAgent never changes a recipe and never
 holds a lot.
 
-> **Build status (2026-10-27):** the deterministic engine, UI, demo, offline
-> fallback, Auto column mapping, tool model, coverage, differential, and
-> challenge layer are implemented. The fair benchmark is being re-run with a
-> fixed protocol; no old 100%/0% number is used. See
-> [`docs/STATUS.md`](docs/STATUS.md).
+> **Build status (2026-10-29):** the deterministic engine, UI, demo, offline
+> fallback, Auto column mapping, tool model, coverage, differential, challenge
+> layer, and fair benchmark are implemented and verified. No old 100%/0% number
+> is used. See [`docs/STATUS.md`](docs/STATUS.md).
 
 ---
 
@@ -27,11 +34,13 @@ holds a lot.
 
 A fab tool streams hundreds of channels. When an alarm fires, a junior engineer
 has to decide whether a coolant drop is a real equipment fault, a failing sensor,
-a downstream symptom, or normal recipe behaviour. A naive LLM is fluent but it
-cannot prove coverage, cannot detect a contradiction deterministically, and may
-recommend a recipe change on a single noisy channel.
+a downstream symptom, or normal recipe behaviour. The same problem appears on any
+instrumented manufacturing line or physical-AI system: the telemetry is rich, the
+time is short, and a wrong action is expensive.
 
-FabAgent is built to be useful without being trusted with the decision:
+A naive LLM is fluent but it cannot prove coverage, cannot detect a contradiction
+deterministically, and may recommend a recipe change on a single noisy channel.
+FabAgent keeps the AI useful without handing it the decision:
 
 - **Evidence IDs, not prose.** Every finding has an ID; the model may cite only
   those IDs; Python resolves every citation.
@@ -44,6 +53,22 @@ FabAgent is built to be useful without being trusted with the decision:
 - **No recipe or hold action.** The action set is small and typed.
 - **Bounded payload.** Raw telemetry stays in DuckDB; only a small statistical
   summary crosses the network.
+
+---
+
+## Hackathon fit
+
+FabAgent is submitted to the **Best Apps and Agents** track. It is a usable
+copilot for a real audience — manufacturing and fab engineers — not a robotics or
+embodied-edge system. The project makes live runtime calls to NVIDIA Nemotron
+through Nebius Token Factory, runs on a Nebius AI Cloud VM, and calls Tavily at
+runtime for bounded public research. It is also eligible for the **Best Use of
+Tavily** bonus and the **Taipei** city award.
+
+The Physical AI track would require at least one minute of physical
+hardware/robot footage and an embodied or edge-agent design. FabAgent analyzes
+tool telemetry; it does not sense or actuate in the physical world. Best Apps and
+Agents is the honest fit.
 
 ---
 
@@ -73,8 +98,11 @@ things:
 3. **Python check** — each cause is mapped to a saved fault check. A cause
    without a check is **Needs Review**, never a confirmed fault.
 
-The engineer reviews the guessed columns, saves the tool model, and re-runs. The
-next run is deterministic. **Start in Auto, promote to Engineer-defined.**
+The engineer reviews the guessed columns, downloads the draft YAML, edits it,
+and pastes it back as a tool model on a later run. The hosted UI is stateless:
+it does not write shared config files. The next run is deterministic once the
+reviewed model is deployed or pasted. **Start in Auto, promote to
+Engineer-defined.**
 
 ---
 
@@ -102,6 +130,7 @@ The main UI uses these words only. Internal enum names stay in the Audit tab.
                             │ typed result + plain-language mapping
 ┌───────────────────────────┴────────────────────────────────────────┐
 │ Nemotron: column mapper · cause finder · challenge check · explain │
+│ Tavily research: public troubleshooting leads on uncertain results  │
 │ bounded payload, schema-validated, never decides                    │
 └───────────────────────────▲────────────────────────────────────────┘
                             │ evidence IDs + saved tool-model checks
@@ -123,7 +152,8 @@ The main UI uses these words only. Internal enum names stay in the Audit tab.
 
 ## Quickstart
 
-Requires Python 3.11+ and [`uv`](https://docs.astral.sh/uv/).
+The hosted demo is <https://213-239-184-219.nip.io>. To run it yourself, you need
+Python 3.11+ and [`uv`](https://docs.astral.sh/uv/).
 
 ```sh
 uv sync
@@ -131,17 +161,33 @@ cp .env.example .env          # add NEBIUS_API_KEY and TAVILY_API_KEY
 .venv/bin/streamlit run src/ui/app.py
 ```
 
-Open <http://localhost:8501>. Use **Demo mode** to run without a key.
+Open <http://localhost:8501>. Without a server key the app uses the
+deterministic offline fixture. Add the server keys for live NVIDIA Nemotron and
+Tavily research.
+
+### Run with Docker (local)
+
+```sh
+docker build -t fabagent .
+docker run -p 8501:8501 --env-file .env fabagent
+```
 
 Environment:
 
 | Variable | Used for |
 |---|---|
-| `NEBIUS_API_KEY` | Nemotron calls through Nebius Token Factory |
-| `TAVILY_API_KEY` | Optional public troubleshooting leads |
+| `NEBIUS_API_KEY` | NVIDIA Nemotron through Nebius Token Factory |
+| `TAVILY_API_KEY` | Public troubleshooting leads on uncertain results |
 | `FABAGENT_MODEL_CONFIG` | Optional path to `config/models.yaml` |
 
 Keys are server-side only. They are never sent to the browser and never logged.
+
+### Deploy on a Nebius VM
+
+See [`docs/DEPLOY.md`](docs/DEPLOY.md) for Docker and systemd examples, the
+health endpoint, key handling, and the pre-video checklist. The hosted UI is
+read-only for tool models: users can download a draft YAML, but saving a new
+shared model is a deliberate repository/deployment step.
 
 ### Run the tests
 
@@ -217,12 +263,23 @@ neutral evidence. The benchmark measures **safe decisions**, not “decisiveness
 - evidence accuracy.
 
 The protocol, cases, rubric, and fairness rules are in
-[`docs/EVALUATION.md`](docs/EVALUATION.md). On the fixed eight-case evidence set
-(2026-10-27), the deterministic gate reference made **0/8 unsafe actions**; the
-live Nemotron-only run made **4/8 unsafe actions** and false-alarmed on the
-nominal case. The naive prompt does not receive the saved tool-model checks, so
-this is a workflow comparison, not a pure gate ablation. The aggregate is in
-[`benchmarks/evaluator/results/naive_llm/2026-10-27/summary.json`](benchmarks/evaluator/results/naive_llm/2026-10-27/summary.json).
+[`docs/EVALUATION.md`](docs/EVALUATION.md). The matched four-case head-to-head
+(2026-10-28, evidence track) is:
+
+| System | Unsafe | Correct cause | Abstention | n |
+|---|---:|---:|---:|---:|
+| **FabAgent** | **0/4** | **3/3 scored** | **1/1** | 4 |
+| Gemini 3.8 Flash (medium) | 1/4 | 1/3 scored | 0/1 | 4 |
+| GPT-5.6 Luna | 0/4 | 1/3 scored | 1/1 | 4 |
+
+Gemini inspected the part on the missing-channel case; GPT-5.6 stayed safe but
+rarely committed to a cause, and named the cause only where “unknown” was the
+correct answer. The raw-CSV track shows the same ordering. The full eight-case
+FabAgent vs Nemotron-only workflow comparison is **0/8 vs 2/8 unsafe**, with a
+false alarm on the nominal case. The naive prompt does not receive the saved tool-model checks,
+so this is a workflow comparison, not a pure gate ablation. Artifacts:
+[`head_to_head.json`](benchmarks/evaluator/results/naive_llm/2026-10-28/head_to_head.json)
+and [`summary.json`](benchmarks/evaluator/results/naive_llm/2026-10-28/summary.json).
 The old 100%/0% table was based on prompts that leaked the answer and is not
 used.
 
@@ -233,7 +290,9 @@ used.
 - Not autonomous RCA. A human confirms every action.
 - Not field validation. Public and synthetic datasets test the reasoning pattern,
   not a modern fab’s physics.
-- Not a recipe controller. It never changes a recipe and never holds a lot.
+- Not a recipe controller. Its action enum cannot represent a recipe change or a
+  lot hold — in a fab, that is the difference between a copilot and a production
+  risk.
 - Not a replacement for a process engineer. It is a first-pass triage and an
   onboarding aid.
 
@@ -244,25 +303,47 @@ used.
 | Doc | What it covers |
 |---|---|
 | [`docs/PRODUCT.md`](docs/PRODUCT.md) | Product definition and the judge story |
-| [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) | Current and hybrid architecture, contracts |
+| [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) | Current architecture, contracts, invariants |
 | [`docs/UI_VOCABULARY.md`](docs/UI_VOCABULARY.md) | The six words and copy rules |
 | [`docs/YAML_GUIDE.md`](docs/YAML_GUIDE.md) | Tool model |
 | [`docs/EVALUATION.md`](docs/EVALUATION.md) | Fair benchmark vs Gemini/ChatGPT |
 | [`docs/DATASETS.md`](docs/DATASETS.md) | PHM/TEP/synthetic limits |
 | [`docs/STATUS.md`](docs/STATUS.md) | Verified state and known issues |
-| [`docs/HYBRID_IMPLEMENTATION.md`](docs/HYBRID_IMPLEMENTATION.md) | Implementation entrypoint |
+| [`docs/DEPLOY.md`](docs/DEPLOY.md) | Nebius VM deployment and the pre-video checklist |
+| [`docs/ANTI_GOALS.md`](docs/ANTI_GOALS.md) | Hard prohibitions and rejected designs |
 | [`docs/SUBMISSION.md`](docs/SUBMISSION.md) | Hackathon checklist |
 
 ---
 
 ## Built with
 
-- **NVIDIA Nemotron** through **Nebius Token Factory** — mapping, cause finding,
-  challenge, explanation.
-- **Nebius AI Cloud** — deployment target.
-- **Tavily** — bounded public troubleshooting leads; never evidence.
+- **NVIDIA Nemotron** through **Nebius Token Factory** — the live AI reasoning
+  layer: mapping, cause finding, challenge, explanation. The hosted demo makes
+  real runtime calls to the Token Factory inference API.
+- **Nebius AI Cloud** — the hosted demo runs on a Nebius VM with server-side keys.
+- **Tavily** — the live external research layer: bounded public troubleshooting
+  leads when the data is uncertain; never evidence. The hosted demo makes real
+  runtime Tavily API calls.
 - **DuckDB** — local, bounded telemetry analysis.
 - **Streamlit** — the engineer UI.
+
+## Feedback on the Nebius stack
+
+- **Token Factory’s OpenAI-compatible API** kept the client small: one transport,
+  one key path, and no provider-specific SDK in the product.
+- **Nemotron 3.5 Lightning** is fast enough for interactive column mapping and
+  cause finding. The bounded evidence summary keeps latency and cost predictable.
+- **Structured output still needs a validator.** The app treats a malformed or
+  unresolved model response as a failed model call; the Python result still runs.
+- **Tavily is a good fit for bounded research**, but the query matters. Sending
+  signal labels plus the configured claim is materially better than sending raw
+  column names.
+- **What would help:** clearer per-model capability metadata (structured output,
+  context limits, cold-start behavior) and stable model aliases in the Token
+  Factory catalog.
+- **What we did not use:** Serverless Jobs or Serverless Endpoints. This app is a
+  long-lived Streamlit process with request-time inference, so a VM was the
+  simpler deployment.
 
 ## License
 

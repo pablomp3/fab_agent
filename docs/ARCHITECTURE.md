@@ -1,8 +1,8 @@
 # FabAgent — architecture
 
-This document describes the system that exists today and the target hybrid
-architecture. The **target** sections are the implementation contract; the
-**current** sections are what the code does now.
+This document describes the architecture that exists today. It is the
+implementation contract: if a doc and the entrypoint disagree, the entrypoint
+wins for scope and this document wins for detail.
 
 ## 1. Design rules
 
@@ -22,8 +22,8 @@ architecture. The **target** sections are the implementation contract; the
    no imports from `agents/`, `tools/`, or `ui/`.
 6. **The UI uses plain words.** The six user-facing results are the vocabulary in
    [`UI_VOCABULARY.md`](UI_VOCABULARY.md). Internal enums stay in the audit view.
-7. **The UI stays familiar.** The hybrid is an extension of the existing
-   Streamlit layout, not a redesign.
+7. **The UI stays familiar.** New capability extends the existing Streamlit
+   layout; it does not replace it.
 
 ## 2. Current pipeline (as-is)
 
@@ -65,19 +65,19 @@ model for a column mapping and returns an unverified draft.
 - The 2 KB payload bound keeps raw telemetry out of the model call.
 - The offline transport makes the demo reproducible without keys.
 
-### Where the pre-hybrid design hurt
+### Why the design looks like this
 
-| Problem | Evidence | Effect |
+| Problem | Evidence | Resolution |
 |---|---|---|
-| **Global baseline** | Before Phase 2, median/MAD was computed over the whole file. A fault that occupies most of the window was absorbed into “normal”; the PHM demo reported `z=591` / `z=946` on other channels. | The same physical fault flipped between `Fault Confirmed` and `Needs Review` depending on the slice. Phase 2 adds `lead_in` / `nominal_file`; the PHM demo and benchmark now share one clean nominal reference. |
+| **Global baseline** | A median/MAD computed over the whole file absorbs a fault that occupies most of the window into “normal”; the PHM demo showed `z=591` / `z=946` on other channels. | The same physical fault flipped between `Fault Confirmed` and `Needs Review` depending on the slice. The current baseline uses `lead_in` or `nominal_file`; the PHM demo and benchmark share one clean nominal reference. |
 | **YAML contains the diagnosis** | `candidate.claim`, `root_cause`, `failure_mode`, and `mechanism` are in the tool model. | The answer looks pre-written; the model is decorative. |
 | **One scenario per run** | Triage selects one config; there is no differential. | A second plausible cause is never shown. |
-| **No coverage rule** | Before Phase 2, a supported candidate could coexist with five large unexplained anomalies. | “Fault Confirmed” overstated what the data covered. Phase 2 demotes a supported check when an unexplained anomaly is `|z| >= 5`. |
+| **No coverage rule** | A supported candidate could coexist with five large unexplained anomalies. | “Fault Confirmed” overstated what the data covered. The current gate demotes a supported check when an unexplained anomaly is `|z| >= 5`. |
 | **No challenge** | The model is asked to explain, not to falsify. | The strongest disconfirming evidence is not tested. |
 | **Leaky vocabulary** | UI texts use `VETOED`, `SUPPORTED`, `EXPERIMENTAL_UNVERIFIED_MAPPING`, `hypothesis_class`. | New users cannot tell what happened. |
 | **Leaky benchmark** | Prompts name the scenario and the answer. | The comparison is not evidence of model quality. |
 
-## 3. Target hybrid architecture
+## 3. System architecture
 
 Three layers, each with a narrow job:
 
@@ -88,9 +88,10 @@ Three layers, each with a narrow job:
 └───────────────────────────▲────────────────────────────────────────┘
                             │ typed result + plain-language mapping
 ┌───────────────────────────┴────────────────────────────────────────┐
-│ 2. Model helpers (Nemotron via Nebius Token Factory)                │
+│ 2. AI reasoning layer (NVIDIA Nemotron via Nebius Token Factory)     │
 │    a. Column mapper   b. Cause finder   c. Challenge check          │
 │    d. Explainer       — all bounded, schema-validated, non-binding  │
+│    e. Tavily research — public leads only, never evidence           │
 └───────────────────────────▲────────────────────────────────────────┘
                             │ evidence IDs + tool-model checks
 ┌───────────────────────────┴────────────────────────────────────────┐
@@ -267,7 +268,7 @@ wording.
 | Entry / routing | `src/analyze.py`, `src/triage.py`, `src/dossier.py` | Product entry, tool matching, CSV scope |
 | Core | `src/core/types.py`, `evidence.py`, `duckdb_exec.py`, `statistics.py`, `pipeline.py`, `sufficiency.py`, `constraints.py`, `safety_gate.py` | Generic deterministic engine |
 | Config | `src/config_loader.py`, `src/config_types.py`, `src/config_writer.py`, `config/sensor_relations/*.yaml` | Tool model load/save |
-| Model helpers | `src/agents/model_transport.py`, `proposal_request.py`, `mapping_request.py`, `rca_engine.py` | Bounded Nemotron calls |
+| AI reasoning | `src/agents/model_transport.py`, `proposal_request.py`, `mapping_request.py`, `rca_engine.py`, `src/tools/tavily_search.py` | Bounded Nemotron calls and Tavily research |
 | Auto mode | `src/experimental.py` | Draft mapping and proposal path |
 | External | `src/tools/tavily_search.py` | Optional public leads |
 | UI | `src/ui/app.py`, `src/ui/presentation.py`, `src/ui/config_promotion.py`, `docs/ui/*.md` | Streamlit pages and copy |
@@ -300,7 +301,7 @@ Hard invariants:
 - The UI never shows an internal enum in the main flow.
 - A benchmark number in the README or UI must trace to a committed artifact.
 
-## 7. Non-goals for the hybrid
+## 7. Non-goals
 
 - No full rewrite. Keep the existing engine and tests.
 - No LLM-decided verdict. The model becomes useful by proposing and challenging,

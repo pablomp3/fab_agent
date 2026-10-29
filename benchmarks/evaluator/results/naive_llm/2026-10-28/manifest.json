@@ -1,0 +1,63 @@
+{
+  "created_at": "2026-10-28T14:14:55.588126+00:00",
+  "git_sha": "c409c47a289b0a3d31ab262a6b2c64259c1b7f34",
+  "prompt_version": "naive-llm-v1",
+  "protocol": "docs/EVALUATION.md",
+  "runs": [
+    {
+      "cases": [
+        {
+          "case": "missing_coolant_flow",
+          "config_sha256": "5db7838601b3f19b7d6b368b15a07619bf9eb4075e8299b0f21d534e28904671",
+          "input_sha256": "91fde226b08037e82ceed611ff4147418717cfc5fc79c1eb8e9b065d888aa2bd",
+          "prompt_sha256": "09a11af032f6a9f587be56c3451c8395dccc3b1463c5f929ea800fa39c06c67c"
+        },
+        {
+          "case": "phm_coolant_coverage",
+          "config_sha256": "5db7838601b3f19b7d6b368b15a07619bf9eb4075e8299b0f21d534e28904671",
+          "input_sha256": "91344cac3ccc86dbf284506217fc6fec93f90e0d595ce20b334496e239726ebc",
+          "prompt_sha256": "87265108bc4f60199dc6b638374d1ed90ede404c7cd64723d36d8c7fae47b876"
+        },
+        {
+          "case": "phm_nominal",
+          "config_sha256": "5db7838601b3f19b7d6b368b15a07619bf9eb4075e8299b0f21d534e28904671",
+          "input_sha256": "151a939e07265d02794a7b40fe74ba97436fc0568f4f5a60d919c3a80922a1b0",
+          "prompt_sha256": "817e37fe839efbeba7d20786da7706a7302516a96b8b35dd2926820d67a80990"
+        },
+        {
+          "case": "synthetic_conflict_b4a",
+          "config_sha256": "184d1835e836f8b9ce7425699318f9ef845d9e1899a9f6e8bca39e80c65f6e6a",
+          "input_sha256": "2942f5e45fcbff4bd33df51387846f124319ea083ad0ca9e873d1b3bee3192df",
+          "prompt_sha256": "837ad060efbc0307e2a02631202eaf3465e3ef4945479610f99e69091fe02c27"
+        },
+        {
+          "case": "synthetic_conflict_rf",
+          "config_sha256": "184d1835e836f8b9ce7425699318f9ef845d9e1899a9f6e8bca39e80c65f6e6a",
+          "input_sha256": "086f470600240f3f96d233b71d0360c2a6bb8f4cc37b53e247886ffc7f707881",
+          "prompt_sha256": "af815e591d0d23049cf26e53e498dc4375236545e1a9ef65f448d7238fcd3294"
+        },
+        {
+          "case": "synthetic_positive_b4e",
+          "config_sha256": "184d1835e836f8b9ce7425699318f9ef845d9e1899a9f6e8bca39e80c65f6e6a",
+          "input_sha256": "cf8f1660d00b90822b89cbab29e6b1b5b9f0ae8a64a043be86cdcdf249b2c161",
+          "prompt_sha256": "bc5f86b96fe1e7a7b651465cd34146e67bfce659e033d8f69248fa55cfe29c29"
+        },
+        {
+          "case": "tep_feed_disturbance",
+          "config_sha256": "4b480146616cf69d2666d4b75aed7555f669715fab2b25bec17768f16e9973ef",
+          "input_sha256": "db681a38a1ef7582226c0839b03bf7d168f83892366d2317cbe019c522937f10",
+          "prompt_sha256": "ed2d554cfe8b5d8010647e645b3ec4de05dacf27b82e3c4e4fad125e1a35ead1"
+        },
+        {
+          "case": "tep_unmodeled",
+          "config_sha256": "4b480146616cf69d2666d4b75aed7555f669715fab2b25bec17768f16e9973ef",
+          "input_sha256": "2a04899041899dc33dd5ca50b364bcc0f9944f663c1294493c3d58d329473634",
+          "prompt_sha256": "5f726e2e0ef979a6f17544663aa1a87a048c678786a530bec927ca7aebcae976"
+        }
+      ],
+      "model": "nvidia/Nemotron-3_5-Lightning",
+      "provider": "nebius",
+      "track": "evidence"
+    }
+  ]
+}

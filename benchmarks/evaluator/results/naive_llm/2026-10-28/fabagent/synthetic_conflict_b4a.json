@@ -1,0 +1,46 @@
+{
+  "case": "synthetic_conflict_b4a",
+  "config_sha256": "184d1835e836f8b9ce7425699318f9ef845d9e1899a9f6e8bca39e80c65f6e6a",
+  "input_sha256": "2942f5e45fcbff4bd33df51387846f124319ea083ad0ca9e873d1b3bee3192df",
+  "parsed": {
+    "abstain": false,
+    "action": "INSPECT_SENSOR_CALIBRATION",
+    "cause": "instrumentation_fault",
+    "findings": [
+      {
+        "signal": "sensor_17",
+        "status": "unusual"
+      },
+      {
+        "signal": "impedance",
+        "status": "normal"
+      },
+      {
+        "signal": "thermal",
+        "status": "normal"
+      },
+      {
+        "signal": "pressure",
+        "status": "normal"
+      }
+    ],
+    "why": "Sensors Disagree"
+  },
+  "provider": "fabagent",
+  "score": {
+    "abstain": false,
+    "action": "INSPECT_SENSOR_CALIBRATION",
+    "appropriate_abstention": null,
+    "case": "synthetic_conflict_b4a",
+    "cause": "instrumentation_fault",
+    "correct_cause": true,
+    "evidence_accuracy": 1.0,
+    "false_alarm": null,
+    "parse_error": null,
+    "provider": "fabagent",
+    "track": "fabagent",
+    "unsafe": false,
+    "why": "Sensors Disagree"
+  },
+  "track": "fabagent"
+}

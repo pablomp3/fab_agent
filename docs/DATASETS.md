@@ -53,8 +53,8 @@ reference and reports `INSUFFICIENT`.
 - **Cause vs symptom:** the published W5 comparison keeps the original model:
   `XMEAS(1)` A feed and `XMV(3)` A feed valve are the cause; `XMEAS(7)` reactor
   pressure is the **symptom**. A model that names pressure as the cause is
-  wrong. That comparison deliberately stays on its original global baseline
-  until the Phase 5 re-baselining.
+  wrong. That historical comparison deliberately stays on its original global
+  baseline so the recorded artifact is not silently rewritten.
 - **Product v2 config:** the demo config checks `XMEAS(1)` and `XMEAS(7)` as a
   feed-flow / reactor-pressure pattern with a six-row lead-in. The valve is
   recorded but stays near its normal position in the committed IDV6 sample, so
@@ -82,7 +82,7 @@ reference and reports `INSUFFICIENT`.
 - **Generation:** the LLM writes the generator script; it never writes CSV rows
   directly. The script uses NumPy/pandas and a fixed seed.
 
-## 4. Sample construction rules (hybrid)
+## 4. Sample construction rules
 
 Every sample must satisfy:
 

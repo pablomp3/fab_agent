@@ -172,7 +172,9 @@ def _with_external_search(
         if result.output.hypotheses
         else "semiconductor tool anomaly"
     )
-    query = build_tavily_query(result.evidence, claim)
+    query = build_tavily_query(
+        result.evidence, claim, signal_labels=dict(result.signal_labels)
+    )
     report(progress, STAGE_TAVILY, "running")
     try:
         references = client.search(query, max_results=3)
@@ -221,14 +223,17 @@ def analyze_csv(
     mapping_max_tokens: int = DEFAULT_MAPPING_MAX_TOKENS,
     tavily_search: TavilySearch | None = None,
     enable_external_search: bool = True,
+    force_experimental: bool = False,
     progress: ProgressCallback | None = None,
 ) -> RunResult:
     """Run the safe path, then fall back to experimental only when no schema matches.
 
     The deterministic safe path always runs first. The experimental mapping runs
     only for ``NO_MATCHING_TOOL_SCHEMA``; its output stays unverified and it
-    never claims a physical root cause. Optional Tavily references are attached
-    after the gate and never change it.
+    never claims a physical root cause. ``force_experimental`` skips the safe
+    path entirely, which is what the UI uses when an engineer explicitly turns
+    off a saved tool model. Optional Tavily references are attached after the
+    gate and never change it.
     """
     active_engine: EngineFactory = (
         engine_factory if engine_factory is not None else _live_engine_factory
@@ -237,21 +242,22 @@ def analyze_csv(
         active_mapping: MappingFactory = _live_mapping_factory
     else:
         active_mapping = mapping_factory
-    safe = analyze_dossier(
-        csv_path,
-        engineer_note,
-        search_dir=search_dir,
-        engine_factory=active_engine,
-        max_tokens=max_tokens,
-        progress=progress,
-    )
-    if safe.outcome is not FALLBACK_OUTCOME:
-        return _with_external_search(
-            _from_dossier(safe),
-            tavily_search,
-            enabled=enable_external_search,
+    if not force_experimental:
+        safe = analyze_dossier(
+            csv_path,
+            engineer_note,
+            search_dir=search_dir,
+            engine_factory=active_engine,
+            max_tokens=max_tokens,
             progress=progress,
         )
+        if safe.outcome is not FALLBACK_OUTCOME:
+            return _with_external_search(
+                _from_dossier(safe),
+                tavily_search,
+                enabled=enable_external_search,
+                progress=progress,
+            )
     experimental = analyze_experimental(
         csv_path,
         engineer_note,

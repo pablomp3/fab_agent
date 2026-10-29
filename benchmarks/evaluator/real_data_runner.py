@@ -30,8 +30,8 @@ def _legacy_tep_scenario(domain: LoadedRelations) -> ScenarioConfig:
     """Keep the published W5 TEP comparison on its original global baseline.
 
     The product TEP config is v2. This benchmark artifact predates the normal
-    reference and is intentionally left unchanged until the Phase 5
-    re-baselining; changing it here would silently rewrite the recorded cases.
+    reference and is intentionally left unchanged so the recorded cases are not
+    silently rewritten.
     """
     cause = ("XMEAS(1)", "XMV(3)")
     symptom = ("XMEAS(7)",)

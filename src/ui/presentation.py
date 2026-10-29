@@ -254,68 +254,83 @@ def result_tone(word: ResultWord) -> OutcomeTone:
     return _RESULT_TONES[word]
 
 
-GLOSSARY: list[tuple[str, str]] = [
+RESULT_GLOSSARY: list[tuple[str, str]] = [
     (
         "Fault Confirmed",
-        "Factory telemetry confirms the suspected equipment fault (all key "
-        "sensors crossed alert thresholds).",
+        "The evidence supports the suspected fault. Inspect the named part.",
     ),
     (
         "Regular Behavior",
-        "All sensor readings are within normal safe limits; no equipment "
-        "fault detected in this run.",
+        "Every checked signal stayed within its alert level. Keep monitoring.",
     ),
     (
         "Sensors Disagree",
-        "Sensors contradict each other (e.g. primary sensor spiked while "
-        "backup stayed flat). Points to a sensor or calibration error.",
-    ),
-    (
-        "Unknown Machine",
-        "No verified configuration matches this tool. AI generated a draft "
-        "column mapping for engineer review.",
+        "One signal moved but the signals that should agree stayed normal. "
+        "Check the sensor first.",
     ),
     (
         "Data Incomplete",
-        "Required sensor channels are missing from the data; cannot judge "
-        "the fault without them.",
+        "A required signal is missing from the export. Get the missing data.",
     ),
     (
         "Needs Review",
-        "The data is not enough to confirm or rule out a cause, or a signal "
-        "moved without a saved check explaining it. Ask an engineer to review.",
+        "The data is not enough to confirm or rule out a cause, or a large signal "
+        "is unexplained. Ask an engineer to review.",
     ),
     (
-        "Analysis Result",
-        "The deterministic safety outcome computed by Python rules. The AI "
-        "cannot change or override this.",
-    ),
-    (
-        "Alert Threshold",
-        "Statistical trigger level (default 3.5 robust z-scores); higher "
-        "values mean more unusual deviation.",
-    ),
-    (
-        "Peak Deviation (z-score)",
-        "Measures how many median absolute deviations a sensor moved from "
-        "normal, calculated using MAD to ignore outliers.",
-    ),
-    (
-        "Safety Check",
-        "Deterministic Python verification rules that re-evaluate all "
-        "statistics independently of AI.",
-    ),
-    (
-        "AI Explanation",
-        "Plain-language translation written by NVIDIA Nemotron to help junior "
-        "engineers interpret telemetry.",
-    ),
-    (
-        "Web Leads",
-        "Tavily web search results with troubleshooting guides, consulted "
-        "only when telemetry is uncertain.",
+        "Unknown Machine",
+        "No saved tool model matches the export. Review the guessed columns before "
+        "trusting them.",
     ),
 ]
+
+TERM_GLOSSARY: list[tuple[str, str]] = [
+    (
+        "Robust z-score",
+        "Peak deviation from normal: 0.6745 × |value − median| / MAD. 0.6745 is "
+        "Φ⁻¹(0.75), the 75th percentile of the standard normal; for normal data "
+        "MAD ≈ 0.6745σ, so the result is in normal-equivalent sigma units. MAD "
+        "stops a few fault points from inflating “normal”.",
+    ),
+    (
+        "Alert level (3.5z)",
+        "The per-signal screening level (`alert_at`, default 3.5). If the data "
+        "were normal, a two-sided 3.5z tail is about 0.047% (roughly 1 in 2,150). "
+        "It is a statistical screening choice, editable by the engineer, not a "
+        "physics-derived tolerance. Use a tool manual or calibrated limit when "
+        "one exists.",
+    ),
+    (
+        "Coverage limit (5z)",
+        "Statistical coverage policy: an unexplained anomaly at or above 5z "
+        "prevents a bare Fault Confirmed, even when another check passed. If the "
+        "data were normal, a two-sided 5z tail is about 0.00006% (roughly 1 in "
+        "1.7 million). It is not a sensor calibration and cannot be lowered by a "
+        "YAML file.",
+    ),
+    (
+        "Evidence ID",
+        "A stable ID for one signal finding. NVIDIA Nemotron may cite only these "
+        "IDs; Python resolves every citation.",
+    ),
+    (
+        "Model payload (2 KB)",
+        "The bounded statistical summary sent to the model. Raw telemetry never "
+        "leaves DuckDB.",
+    ),
+    (
+        "NVIDIA Nemotron",
+        "The AI reasoning layer: column mapping, cause proposals, the challenge "
+        "check, and the explanation. It never chooses the result or the action.",
+    ),
+    (
+        "Tavily research",
+        "Public troubleshooting leads on uncertain results. Context for a human, "
+        "never evidence for the gate.",
+    ),
+]
+
+GLOSSARY: list[tuple[str, str]] = [*RESULT_GLOSSARY, *TERM_GLOSSARY]
 
 
 @dataclass(frozen=True, slots=True)
@@ -606,7 +621,7 @@ def _evidence_status(kind_val: str) -> str:
 def _how_unusual(value: float | None) -> str:
     if value is None:
         return MISSING
-    return f"{value:.2f}z"
+    return z_text(value)
 
 
 def _threshold_text(value: float | None) -> str:
@@ -952,6 +967,14 @@ def _cell_text(value: object) -> str:
     return text.replace("|", "\\|").replace("\n", " ")
 
 
+def _pretty_header(header: str) -> str:
+    """Humanize snake_case headers without destroying proper nouns."""
+    text = header.replace("_", " ").strip()
+    if "_" in header or text.islower():
+        return text.capitalize()
+    return text
+
+
 def markdown_table(rows: list[dict[str, object]]) -> str:
     """Render presentation rows as a GitHub-flavored Markdown table.
 
@@ -963,7 +986,7 @@ def markdown_table(rows: list[dict[str, object]]) -> str:
     if not rows:
         return ""
     headers = [str(key) for key in rows[0]]
-    pretty = [header.replace("_", " ").strip().capitalize() for header in headers]
+    pretty = [_pretty_header(header) for header in headers]
     lines = [
         "| " + " | ".join(pretty) + " |",
         "| " + " | ".join("---" for _ in headers) + " |",

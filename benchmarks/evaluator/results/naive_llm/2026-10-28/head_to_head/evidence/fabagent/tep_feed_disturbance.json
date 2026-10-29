@@ -1,0 +1,42 @@
+{
+  "case": "tep_feed_disturbance",
+  "config_sha256": "4b480146616cf69d2666d4b75aed7555f669715fab2b25bec17768f16e9973ef",
+  "input_sha256": "db681a38a1ef7582226c0839b03bf7d168f83892366d2317cbe019c522937f10",
+  "parsed": {
+    "abstain": false,
+    "action": "ESCALATE_TO_ENGINEER",
+    "cause": "upstream_process",
+    "findings": [
+      {
+        "signal": "XMEAS(1)",
+        "status": "unusual"
+      },
+      {
+        "signal": "XMV(3)",
+        "status": "normal"
+      },
+      {
+        "signal": "XMEAS(7)",
+        "status": "unusual"
+      }
+    ],
+    "why": "Fault Confirmed"
+  },
+  "provider": "fabagent",
+  "score": {
+    "abstain": false,
+    "action": "ESCALATE_TO_ENGINEER",
+    "appropriate_abstention": null,
+    "case": "tep_feed_disturbance",
+    "cause": "upstream_process",
+    "correct_cause": true,
+    "evidence_accuracy": 1.0,
+    "false_alarm": null,
+    "parse_error": null,
+    "provider": "fabagent",
+    "track": "fabagent",
+    "unsafe": false,
+    "why": "Fault Confirmed"
+  },
+  "track": "fabagent"
+}

@@ -1,0 +1,70 @@
+{
+  "created_at": "2026-10-28T15:59:22.178541+00:00",
+  "git_sha": "c409c47a289b0a3d31ab262a6b2c64259c1b7f34",
+  "prompt_version": "naive-llm-v1",
+  "protocol": "docs/EVALUATION.md",
+  "runs": [
+    {
+      "cases": [
+        {
+          "case": "missing_coolant_flow",
+          "config_sha256": "5db7838601b3f19b7d6b368b15a07619bf9eb4075e8299b0f21d534e28904671",
+          "input_sha256": "91fde226b08037e82ceed611ff4147418717cfc5fc79c1eb8e9b065d888aa2bd",
+          "prompt_sha256": "c73e63bf1ac9c12fc5384fe328fbc2f6a78a9334fda5174b7d6e9e0ed48ec449"
+        },
+        {
+          "case": "phm_coolant_coverage",
+          "config_sha256": "5db7838601b3f19b7d6b368b15a07619bf9eb4075e8299b0f21d534e28904671",
+          "input_sha256": "91344cac3ccc86dbf284506217fc6fec93f90e0d595ce20b334496e239726ebc",
+          "prompt_sha256": "18bed66c9acc5f6db962090eb74f5f28d3cae5a678d0b272ebea13f78b1b78ac"
+        },
+        {
+          "case": "synthetic_conflict_rf",
+          "config_sha256": "184d1835e836f8b9ce7425699318f9ef845d9e1899a9f6e8bca39e80c65f6e6a",
+          "input_sha256": "086f470600240f3f96d233b71d0360c2a6bb8f4cc37b53e247886ffc7f707881",
+          "prompt_sha256": "5a10c614ff9fa87b2c8b24c96eda274bbc0fac68fef603977c3b27eb8b82c0d3"
+        },
+        {
+          "case": "tep_feed_disturbance",
+          "config_sha256": "4b480146616cf69d2666d4b75aed7555f669715fab2b25bec17768f16e9973ef",
+          "input_sha256": "db681a38a1ef7582226c0839b03bf7d168f83892366d2317cbe019c522937f10",
+          "prompt_sha256": "0235e7adcb5be754717cac3859048b662c2d658ce046879c8f9de09db36f865a"
+        }
+      ],
+      "model": "manual",
+      "provider": "gemini",
+      "track": "evidence"
+    },
+    {
+      "cases": [
+        {
+          "case": "missing_coolant_flow",
+          "config_sha256": "5db7838601b3f19b7d6b368b15a07619bf9eb4075e8299b0f21d534e28904671",
+          "input_sha256": "91fde226b08037e82ceed611ff4147418717cfc5fc79c1eb8e9b065d888aa2bd",
+          "prompt_sha256": "0bb84a6a3d01079bd890a9a2d5446b08fdb7942274570860f895007709b180d7"
+        },
+        {
+          "case": "phm_coolant_coverage",
+          "config_sha256": "5db7838601b3f19b7d6b368b15a07619bf9eb4075e8299b0f21d534e28904671",
+          "input_sha256": "91344cac3ccc86dbf284506217fc6fec93f90e0d595ce20b334496e239726ebc",
+          "prompt_sha256": "2e542ccdfda2dcae81cfdf290af1cab7f46778b8c3aa9cc615482d61642747cb"
+        },
+        {
+          "case": "synthetic_conflict_rf",
+          "config_sha256": "184d1835e836f8b9ce7425699318f9ef845d9e1899a9f6e8bca39e80c65f6e6a",
+          "input_sha256": "086f470600240f3f96d233b71d0360c2a6bb8f4cc37b53e247886ffc7f707881",
+          "prompt_sha256": "e06e90f81a99e679b2dadb8e0a5e73da76d441713eb5c200ea2f34abc0e3a81b"
+        },
+        {
+          "case": "tep_feed_disturbance",
+          "config_sha256": "4b480146616cf69d2666d4b75aed7555f669715fab2b25bec17768f16e9973ef",
+          "input_sha256": "db681a38a1ef7582226c0839b03bf7d168f83892366d2317cbe019c522937f10",
+          "prompt_sha256": "25a9d08a649990cec435a1a02d0840d63ad108a01499fb4523cc12a4049e35d3"
+        }
+      ],
+      "model": "manual",
+      "provider": "openai",
+      "track": "evidence"
+    }
+  ]
+}

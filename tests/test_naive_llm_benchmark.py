@@ -151,6 +151,20 @@ class ParsingTests(unittest.TestCase):
         self.assertEqual(answer.cause, "none")
         self.assertEqual(answer.action, "HOLD_LOT")
 
+    def test_parse_undoes_html_escaped_backslash_linebreaks(self) -> None:
+        text = (
+            '{\\\n&#x20;"findings": [],\\\n'
+            '&#x20;"cause": "unknown",\\\n'
+            '&#x20;"action": "ESCALATE_TO_ENGINEER",\\\n'
+            '&#x20;"abstain": true,\\\n'
+            '&#x20;"why": "not enough data"\\\n'
+            '}'
+        )
+        answer = parse_response(text)
+        self.assertEqual(answer.cause, "unknown")
+        self.assertEqual(answer.action, "ESCALATE_TO_ENGINEER")
+        self.assertTrue(answer.abstain)
+
     def test_missing_answer_is_a_recorded_failure(self) -> None:
         case = select_cases(load_cases(), ("phm_nominal",))[0]
         score = score_case(case, None, parse_error="unparsable")

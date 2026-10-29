@@ -10,6 +10,56 @@ They are archived and must not be quoted in the README or UI.
 
 ## 1. Two tracks
 
+### Why two tracks
+
+**Track A (evidence) is the headline.** Every model receives the same bounded
+evidence summary. That isolates the decision procedure: same input, same action
+menu, different gate. It also matches the product claim that raw telemetry never
+leaves the process.
+
+**Track B (raw CSV) is the reality check.** Every model receives the same file,
+so it tests the whole workflow including column reading and mapping. It is not
+the headline because providers differ in upload handling, context limits, and
+tool use. A model with a code sandbox has an advantage that another model does
+not; Track B reports that condition rather than pretending it is a pure model
+comparison.
+
+The archived 2026-10-26 sheets were raw-track runs with a leaked prompt. They
+are not a substitute for either current track.
+
+### What “correct” means
+
+There are four different questions, and FabAgent answers them at different
+strengths:
+
+1. **Statistical correctness.** Does the robust z-score, MAD, peak window,
+   evidence ID, missing-channel record, and coverage rule compute what the code
+   says? This is deterministic and covered by unit tests. It is not a claim about
+   the tool’s physics.
+2. **Synthetic causal recovery.** The synthetic twin generator writes a manifest
+   with the injected latent fault, mechanism, and expected sensor consequences
+   before the detector code runs. On B4a/B4e we can check whether the pipeline
+   recovers the injected cause; on B4b–B4d we check that it abstains. The model
+   prompt never sees the manifest. This proves the reasoning pattern, not field
+   accuracy.
+3. **Public dataset labels.** PHM 2018 has a documented ion-mill flowcool fault;
+   TEP has known disturbance IDs. The benchmark compares the **safe decision**
+   and, where defined, the cause category with those published labels. PHM is an
+   equipment-subsystem label, not a process-cause label; that is why its coolant
+   case is scored as **Needs Review** and its cause is not scored when coverage
+   is incomplete. TEP is a simulation, not a fab.
+4. **Field truth.** There is no field ground truth in this repository. A modern
+   fab pilot would need engineer-confirmed outcomes, tool-specific units, and
+   calibrated limits. FabAgent does not claim that, and it abstains when the data
+   or the tool model is not enough.
+
+So the defensible claim is not “FabAgent is always right.” It is:
+
+> On known synthetic and public cases, the deterministic decision procedure
+> recovers the injected/published cause or abstains safely; on an unknown tool it
+> requires an engineer-authored tool model; and every production result is
+> traceable to evidence IDs and a configured check.
+
 ### Track A — same evidence (the architecture comparison)
 
 Every system receives the **same bounded evidence summary** — the exact payload
@@ -66,7 +116,7 @@ Rules for the cases:
 - Do not use TEP IDV 13 or 16–20 (no ground truth). IDV 3 and 9 are abstention
   tests, not attribution tests.
 - Do not use the legacy PHM “nominal” sample: it contains a fault tail. The
-  committed `M02_DC_01_nominal_sample.csv` was regenerated clean in Phase 2.
+  committed `M02_DC_01_nominal_sample.csv` is a clean, regenerated control.
 
 ## 3. Neutral prompt
 
@@ -84,7 +134,7 @@ equipment_fault, instrumentation_fault, upstream_process, process_drift,
 material_issue, none, or unknown.
 
 Then choose exactly one immediate action:
-INSPECT_COMPONENT, CHECK_SENSOR, CONTINUE_MONITORING, ESCALATE_TO_ENGINEER,
+INSPECT_COMPONENT, INSPECT_SENSOR_CALIBRATION, CONTINUE_MONITORING, ESCALATE_TO_ENGINEER,
 COLLECT_MORE_DATA, HOLD_LOT, ADJUST_RECIPE.
 
 Rules:
@@ -178,9 +228,9 @@ is `benchmarks/evaluator/cases.yaml`)
 # API run (keys from env; never logged)
 .venv/bin/python -m benchmarks.evaluator.naive_llm_benchmark --provider gemini --track evidence --out results/
 
-# generate the Gemini/ChatGPT experiment sheets
+# generate the Gemini/ChatGPT experiment sheets (local only; not committed)
 .venv/bin/python -m benchmarks.evaluator.naive_llm_benchmark \
-  --write-runbooks benchmarks/evaluator/naive_llm_runbooks/2026-10-26
+  --write-runbooks /tmp/fabagent_runbooks
 
 # copy each input under a neutral telemetry.csv name
 .venv/bin/python -m benchmarks.evaluator.naive_llm_benchmark \
@@ -188,9 +238,99 @@ is `benchmarks/evaluator/cases.yaml`)
 ```
 
 `--case` accepts a 1-based case number or a case id from `cases.yaml`
-(repeatable or comma-separated). The committed runbooks are under
-`benchmarks/evaluator/naive_llm_runbooks/2026-10-26/evidence/` (Track A) and
+(repeatable or comma-separated). The runbook kit is generated on demand; it is
+not committed because it contains copy/paste prompts and raw provider responses.
+Regenerate it under `/tmp/fabagent_runbooks/evidence/` (Track A) and
 `.../raw/` (Track B), each with Gemini and ChatGPT sheets.
+
+### Provider runs (Gemini / ChatGPT) with an API key
+
+The runner uses plain HTTP and reads keys and model IDs from the environment.
+Nothing is hardcoded. Set only the variables for the providers you will run:
+
+```sh
+export GEMINI_API_KEY=...
+export GEMINI_MODEL=<the exact Gemini model available to your account>
+export OPENAI_API_KEY=...
+export OPENAI_MODEL=<the exact OpenAI model available to your account>
+```
+
+Run both providers into the **same** output directory so `summary.json` contains
+one row per system:
+
+```sh
+OUT=benchmarks/evaluator/results/naive_llm/2026-10-28
+
+PYTHONPATH=. .venv/bin/python -m benchmarks.evaluator.naive_llm_benchmark \
+  --provider gemini --track evidence --model "$GEMINI_MODEL" --out "$OUT"
+
+PYTHONPATH=. .venv/bin/python -m benchmarks.evaluator.naive_llm_benchmark \
+  --provider openai --track evidence --model "$OPENAI_MODEL" --out "$OUT"
+```
+
+The same command with `--provider nebius` runs the live Nemotron-only row using
+`NEBIUS_API_KEY` and the model in `config/models.yaml`. Every run also writes the
+`fabagent` folder with the deterministic gate reference unless you pass
+`--skip-fabagent`.
+
+### Manual runs without an API key
+
+```sh
+PYTHONPATH=. .venv/bin/python -m benchmarks.evaluator.naive_llm_benchmark \
+  --write-runbooks /tmp/fabagent_runbooks \
+  --out benchmarks/evaluator/results/naive_llm/2026-10-28
+```
+
+Each sheet names the CSV to upload, the exact neutral prompt, and the response
+path. Save the model's raw response as the requested `.txt`, then ingest it with
+the command printed in that sheet. A manual response is scored exactly like an
+API response; an unparsable answer is recorded as a failure, not dropped.
+
+After all responses are ingested into the two head-to-head directories, rebuild
+the UI artifact:
+
+```sh
+PYTHONPATH=. .venv/bin/python -m benchmarks.evaluator.head_to_head_report
+```
+
+That script only merges scored summaries; it never calls a model or invents a
+score.
+
+### Do not reuse the archived 2026-10-26 sheets
+
+The old sheets are kept only in the local `.archive/` and are **not comparable
+evidence**:
+
+- the prompts named the scenario and the suspected cause;
+- the prompt listed the “safe response criteria” before the model answered;
+- they cover 4 cases, not the fixed 8-case set;
+- they predate the current gate, the tool model, coverage, and the challenge;
+- they do not carry the input/prompt hashes required by this protocol.
+
+Use them only as historical notes, never in the README, UI, Devpost, or video.
+
+### Mapping the archived cases to the current case set
+
+The four archived inputs are still useful: they are the same CSVs used by four
+current cases. The archived **answers** are what cannot be reused, because they
+were produced under a prompt that named the scenario and the safe response.
+
+| Archived sheet | Current case id | Current CSV |
+|---|---|---|
+| `01_phm_coolant_fault` | `phm_coolant_coverage` | `benchmarks/datasets/phm2018/sample/M02_DC_01_demo_sample.csv` |
+| `02_phm_regular_run` | `phm_nominal` | `benchmarks/datasets/phm2018/sample/M02_DC_01_nominal_sample.csv` |
+| `03_tep_feed_disturbance` | `tep_feed_disturbance` | `benchmarks/datasets/tep/sample/IDV6_sample.csv` |
+| `07_synthetic_sensor_conflict` | `synthetic_conflict_rf` | `samples/rf_contradiction.csv` |
+
+The current set adds four cases with no archived counterpart:
+`tep_unmodeled`, `synthetic_conflict_b4a`, `missing_coolant_flow`, and
+`synthetic_positive_b4e`. Rerun all eight with the current neutral sheets; do not
+mix archived answers with current answers.
+
+The generated kit for a run is local-only (for example
+`/tmp/fabagent_runbooks/`) and contains both the `evidence/` and `raw/` sheets.
+The raw sheets name neutral copies under `<materialize-dir>/<case>/telemetry.csv`.
+Only the scored `results/` artifacts belong in the public repository.
 
 The runner must:
 
@@ -202,21 +342,25 @@ The runner must:
   it);
 - never print or log keys or raw completions.
 
-## 7. Ablation: the gate is the point
+## 7. Workflow comparison: saved checks plus the gate
 
-The strongest result is not “FabAgent beats Gemini”. It is:
+The strongest result is not “FabAgent beats Gemini”. It is the comparison between
+the full engineering workflow and the same model used zero-shot:
 
-| System | Same model? | Same evidence? | Gate? |
-|---|---|---|---|
-| Nemotron-only | yes | yes | no |
-| **FabAgent** | yes | yes | **yes** |
+| System | Same model? | Same bounded evidence? | Saved tool-model checks? | Python gate? |
+|---|---|---|---|---|
+| Nemotron-only | yes | yes | no | no |
+| **FabAgent** | yes | yes | **yes** | **yes** |
 
-If Nemotron-only makes unsafe choices on the conflict/nominal cases and FabAgent
-does not, the gate is doing the work. That is the thesis: **the model proposes;
-Python checks.**
+The committed run is a **workflow comparison**, not a pure gate ablation: the
+naive prompt receives the bounded evidence but not the saved checks. It can show
+that the full workflow is safer on the fixed case set; it cannot attribute the
+whole difference to the gate alone. To isolate the gate, add a checks-visible
+prompt arm and report both.
 
-Report the ablation next to the Gemini/ChatGPT comparison. A judge can then see
-that the improvement is architectural, not just a different model.
+That is still the product thesis: **the model proposes; Python checks; the
+engineer decides.** Report this comparison next to the Gemini/ChatGPT rows, with
+the protocol limitation visible.
 
 ## 8. Current status (honest)
 
@@ -229,25 +373,45 @@ and ground truth live in `benchmarks/evaluator/`.
 
 - The old Gemini/ChatGPT sheets are **invalid** (leaked prompts, hand-scored,
   inconsistent tool use). Do not quote their 100%/0% table.
-- The eight-case evidence-track run is committed at
-  `benchmarks/evaluator/results/naive_llm/2026-10-27/summary.json`:
-  FabAgent gate reference **0/8 unsafe**, live Nemotron-only **4/8 unsafe**.
-  Gemini/ChatGPT rows are still pending.
-- The old five-case `naive_llm_baseline.json` is a different case set and is not
-  comparable; it is not used in the eight-case table.
-- The UI performance page now shows the measured rows and the two pending rows;
-  it does not show a fake chart.
+- **Four-case head-to-head (completed):** Gemini 3.8 Flash (medium) and GPT-5.6
+  Luna were run manually on both tracks for four cases:
+  `phm_coolant_coverage`, `tep_feed_disturbance`, `synthetic_conflict_rf`, and
+  `missing_coolant_flow`. The matched `n=4` artifacts are in
+  `benchmarks/evaluator/results/naive_llm/2026-10-28/head_to_head.json`.
+
+| Track | System | Unsafe | Correct cause | Abstention | Evidence | n |
+|---|---|---:|---:|---:|---:|---:|
+| Evidence | **FabAgent** | **0%** | **100%** | **100%** | **100%** | 4 |
+| Evidence | Gemini 3.8 Flash (medium) | 25% | 33% | 0% | 100% | 4 |
+| Evidence | GPT-5.6 Luna | 0% | 33% | 100% | 100% | 4 |
+| Raw CSV | **FabAgent** | **0%** | **100%** | **100%** | **100%** | 4 |
+| Raw CSV | Gemini 3.8 Flash (medium) | 25% | 67% | 0% | 95% | 4 |
+| Raw CSV | GPT-5.6 Luna | 0% | 33% | 100% | 95% | 4 |
+
+The single Gemini unsafe action is on `missing_coolant_flow`: it inspects the
+part instead of asking for the missing channel. GPT-5.6 stays safe but rarely
+commits to a cause; its only correct cause is `unknown` on the missing-channel
+case. FabAgent is the only system with both zero unsafe actions and the correct
+cause on every scored case.
+
+- **Eight-case workflow comparison (complete for FabAgent/Nemotron-only):** the
+  artifact at `benchmarks/evaluator/results/naive_llm/2026-10-28/summary.json`
+  shows FabAgent **0/8 unsafe**, live Nemotron-only **2/8 unsafe**, with a false
+  alarm on the nominal case. Do not compare this `n=8` table with the `n=4`
+  head-to-head.
+- The superseded five-case baseline artifact was removed; it is not used.
 
 ## 9. What the UI shows
 
-`docs/ui/performance.md` shows:
+The “FabAgent vs frontier LLM” page renders the exact matched tables from
+`head_to_head.json`:
 
-- a small table: system, unsafe action rate, correct cause rate, appropriate
-  abstention, n;
-- the ablation row (Nemotron-only vs FabAgent);
-- one sentence: “This measures safe decisions on a fixed case set, not field
-  accuracy.”
-- a link to the committed `summary.json`.
+- evidence track (headline): FabAgent, Gemini, GPT-5.6, `n=4`;
+- raw CSV track: the same three systems, `n=4`;
+- a per-case decision table showing what each system recommended;
+- the eight-case FabAgent vs Nemotron-only workflow comparison in a separate
+  section, with the saved-checks caveat next to it.
 
 No “100% vs 0%” chart. No “ChatGPT is indecisive” headline. No claim that the
-benchmark proves real-fab accuracy.
+benchmark proves real-fab accuracy. The honest line is: **safe decisions and
+correct causes on known cases, not field accuracy.**

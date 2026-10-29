@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import json
 import os
+from collections.abc import Mapping
 from dataclasses import dataclass
 from typing import Protocol, cast
 from urllib.error import URLError
@@ -130,21 +131,30 @@ class TavilyClient:
         return tuple(references)
 
 
-def build_tavily_query(evidence: tuple[Evidence, ...], configured_claim: str) -> str:
+def build_tavily_query(
+    evidence: tuple[Evidence, ...],
+    configured_claim: str,
+    signal_labels: Mapping[str, str] | None = None,
+) -> str:
     """Build a bounded query from anomaly signal names and a configured claim.
 
     Raw values, units, windows, and the engineer note are intentionally
-    excluded. The query is only a retrieval hint, not evidence.
+    excluded. Engineer-facing labels are preferred when they are available, so
+    a query says ``RF power`` rather than ``sensor_17``. The query is only a
+    retrieval hint, not evidence.
     """
+    labels = {} if signal_labels is None else dict(signal_labels)
     signals: list[str] = []
     for item in evidence:
         if item.kind is not EvidenceKind.SENSOR_ANOMALY or not item.signal:
             continue
-        if item.signal not in signals:
-            signals.append(item.signal)
+        name = labels.get(item.signal, item.signal)
+        if name not in signals:
+            signals.append(name)
         if len(signals) >= 3:
             break
-    subject = " ".join(signals) if signals else configured_claim.strip()
+    subject_parts = [configured_claim.strip(), *signals]
+    subject = " ".join(part for part in subject_parts if part)
     if not subject:
         subject = "semiconductor tool anomaly"
     return f"semiconductor manufacturing troubleshooting {subject}"

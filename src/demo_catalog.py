@@ -109,7 +109,7 @@ _UNKNOWN_COLUMNS = (
 _DEMOS: tuple[DemoCase, ...] = (
     DemoCase(
         key="phm_flowcool_supported",
-        label="PHM 2018 dataset — Coolant Fault 🟠 [Needs Review]",
+        label="PHM 2018 dataset — ion mill coolant window",
         csv_path=(
             ROOT
             / "benchmarks"
@@ -127,7 +127,7 @@ _DEMOS: tuple[DemoCase, ...] = (
             "Real public ion-mill etching tool dataset. The later time window "
             "contains a documented coolant-loop fault where both coolant flow "
             "and coolant pressure drop simultaneously. Several other declared "
-            "channels also move, so the result is not a bare confirmation."
+            "channels also move."
         ),
         expected=(
             "Result: Needs Review — the coolant check passed, but large anomalies "
@@ -140,7 +140,7 @@ _DEMOS: tuple[DemoCase, ...] = (
     ),
     DemoCase(
         key="phm_flowcool_inconclusive",
-        label="PHM 2018 dataset — Normal Run 🟢 [Regular Behavior]",
+        label="PHM 2018 dataset — healthy production window",
         csv_path=(
             ROOT
             / "benchmarks"
@@ -152,9 +152,8 @@ _DEMOS: tuple[DemoCase, ...] = (
         config_path=ROOT / "config" / "sensor_relations" / "ion_mill_phm18.yaml",
         note="Flowcool loop looks normal; check whether anything moved.",
         description=(
-            "The same public ion-mill tool during healthy production. The "
-            "sensors are present and stay within normal limits, so FabAgent "
-            "reports Regular Behavior instead of inventing a false alarm."
+            "The same public ion-mill tool during healthy production. All "
+            "declared sensors are present and quiet."
         ),
         expected=(
             "Result: Regular Behavior — every checked signal stayed below its "
@@ -166,7 +165,7 @@ _DEMOS: tuple[DemoCase, ...] = (
     ),
     DemoCase(
         key="tep_feed_supported",
-        label="TEP dataset — Feed Disturbance 🔴 [Fault Confirmed]",
+        label="TEP dataset — feed disturbance window",
         csv_path=(
             ROOT / "benchmarks" / "datasets" / "tep" / "sample" / "IDV6_sample.csv"
         ),
@@ -190,7 +189,7 @@ _DEMOS: tuple[DemoCase, ...] = (
     ),
     DemoCase(
         key="tep_unmodeled",
-        label="TEP dataset — Unmodeled Disturbance 🟠 [Needs Review]",
+        label="TEP dataset — unmodeled disturbance window",
         csv_path=(
             ROOT / "benchmarks" / "datasets" / "tep" / "sample" / "IDV3_sample.csv"
         ),
@@ -201,9 +200,8 @@ _DEMOS: tuple[DemoCase, ...] = (
         ),
         description=(
             "A different TEP disturbance (temperature step). Reactor pressure "
-            "moved outside its normal range, but no saved feed-system check "
-            "explains it. FabAgent asks for a human review instead of calling "
-            "this run normal."
+            "moves outside its normal range, and no saved feed-system check "
+            "covers that movement."
         ),
         expected=(
             "Result: Needs Review — a signal moved without a saved check "
@@ -215,7 +213,7 @@ _DEMOS: tuple[DemoCase, ...] = (
     ),
     DemoCase(
         key="synthetic_flowcool_supported",
-        label="Synthetic dataset — Coolant Fault 🔴 [Fault Confirmed]",
+        label="Synthetic dataset — coolant excursion",
         csv_path=ROOT / "samples" / "flowcool_supported.csv",
         config_path=ROOT / "config" / "sensor_relations" / "synthetic_flowcool.yaml",
         note="Flowcool loop excursion during the RF step.",
@@ -233,13 +231,13 @@ _DEMOS: tuple[DemoCase, ...] = (
     ),
     DemoCase(
         key="synthetic_flowcool_inconclusive",
-        label="Synthetic dataset — Normal Run 🟢 [Regular Behavior]",
+        label="Synthetic dataset — quiet baseline",
         csv_path=ROOT / "samples" / "flowcool_inconclusive.csv",
         config_path=ROOT / "config" / "sensor_relations" / "synthetic_flowcool.yaml",
         note="Flowcool loop looks normal; check whether anything moved.",
         description=(
-            "Compact synthetic testbed with all sensors in quiet baseline state. "
-            "Demonstrates zero-LLM mathematical abstention."
+            "Compact synthetic testbed with all sensors in a quiet baseline "
+            "state."
         ),
         expected=(
             "Result: Regular Behavior — every checked signal stayed below its "
@@ -251,7 +249,7 @@ _DEMOS: tuple[DemoCase, ...] = (
     ),
     DemoCase(
         key="synthetic_rf_veto",
-        label="Synthetic dataset — Sensor Conflict 🟡 [Sensors Disagree]",
+        label="Synthetic dataset — RF sensor conflict",
         csv_path=ROOT / "samples" / "rf_contradiction.csv",
         config_path=ROOT / "config" / "sensor_relations" / "synthetic_rf.yaml",
         note=(
@@ -259,9 +257,8 @@ _DEMOS: tuple[DemoCase, ...] = (
             "look quiet."
         ),
         description=(
-            "The primary RF sensor spikes to 12z while redundant electrical, "
-            "thermal, and pressure sensors stay flat. A naive LLM falsely halts "
-            "the chamber; FabAgent triggers a hard veto for sensor contradiction."
+            "The primary RF sensor spikes while redundant electrical, thermal, "
+            "and pressure sensors stay flat."
         ),
         expected=(
             "Result: Sensors Disagree — primary sensor spiked but backup stayed "
@@ -273,7 +270,7 @@ _DEMOS: tuple[DemoCase, ...] = (
     ),
     DemoCase(
         key="unknown_export",
-        label="Unknown tool dataset — No Config ⚪ [Unknown Machine]",
+        label="Unknown tool dataset — no saved tool model",
         csv_path=ROOT / "samples" / "unknown_tool.csv",
         config_path=None,
         note="New tool export; no configured schema yet.",

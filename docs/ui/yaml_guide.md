@@ -46,5 +46,3 @@ checks:
 > `must_stay_normal` signal also moves, the result is **Sensors Disagree**, not a
 > confirmed fault. A model-proposed cause that is not in this file is **Needs
 > Review**, never an action.
-
-The full field reference is in [`../YAML_GUIDE.md`](../YAML_GUIDE.md).

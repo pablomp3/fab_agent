@@ -1,9 +1,10 @@
 # FabAgent — product definition
 
-**One line:** FabAgent is an evidence-gated troubleshooting copilot for semiconductor
-tools. It turns a CSV export into a small set of evidence records, checks them
-against a saved tool model, and gives the engineer one safe next step — or says
-plainly that the data is not enough.
+**One line:** FabAgent is a deterministic troubleshooting and RCA copilot for
+manufacturing and physical-AI operations, with a focus on semiconductor tools. It
+turns a CSV export into a small set of evidence records, checks them against a
+saved tool model, and gives the engineer one safe next step — or says plainly
+that the data is not enough.
 
 ## The problem
 
@@ -15,7 +16,11 @@ and it can recommend a recipe change or a hold on a single noisy channel.
 
 FabAgent is built around one rule:
 
-> **The model proposes. Python checks. The engineer decides.**
+> **NVIDIA Nemotron reasons. Tavily researches. Python checks. The engineer decides.**
+
+The first target is semiconductor fabs. The same workflow applies to any
+instrumented manufacturing or physical-AI operation that can export a CSV and
+describe its own tool model.
 
 ## Two ways to use it
 
@@ -46,9 +51,10 @@ things:
    A cause that is not backed by a check is shown as **Needs Review**, never as
    a confirmed fault.
 
-The engineer reviews the guessed columns and can save them as a tool model. The
-next run is deterministic. This is the “start in Auto, promote to Engineer-defined”
-story.
+The engineer reviews the guessed columns, downloads the draft, edits it, and
+pastes it back as a tool model on a later run. The hosted UI is stateless: it
+does not write shared config files. This is the “start in Auto, promote to
+Engineer-defined” story.
 
 ## The six results a user sees
 
@@ -86,7 +92,9 @@ kept in the audit view, not in the main flow.
 - Not autonomous RCA. A human confirms every action.
 - Not field validation. Public and synthetic datasets test the reasoning pattern,
   not a modern fab’s physics.
-- Not a recipe controller. It never changes a recipe and never holds a lot.
+- Not a recipe controller. Its action enum cannot represent a recipe change or a
+  lot hold — in a fab, that is the difference between a copilot and a production
+  risk.
 - Not a replacement for a process engineer. It is a first-pass triage and an
   onboarding aid.
 
@@ -100,12 +108,14 @@ kept in the audit view, not in the main flow.
 
 ## The 30-second judge story
 
-1. Upload an export from a machine FabAgent has never seen.
-2. Auto maps the columns and proposes possible causes.
+1. Pick a prepared tool export, or upload one from an unseen machine.
+2. NVIDIA Nemotron maps unknown columns and proposes possible causes.
 3. Python checks them; an unconfigured cause stays **Needs Review**.
-4. The engineer adds one fault check and saves the corrected tool model.
-5. Upload the same export again: FabAgent matches the saved model, and the
+4. Tavily adds public troubleshooting leads if the data is uncertain.
+5. The engineer downloads the draft, adds one fault check in their own config
+   repository, and deploys or pastes the reviewed model.
+6. Upload the same export again: FabAgent matches the saved model, and the
    result is deterministic with a safe next step.
 
-That is the hybrid thesis: **Nemotron proposes and challenges; Python checks and
+That is the product thesis: **the AI reasons and challenges; Python checks and
 decides; the engineer stays in control.**

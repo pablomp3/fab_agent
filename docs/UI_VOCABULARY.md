@@ -72,8 +72,12 @@ Use plain role names, not “agent” jargon:
 - **Challenge check** — tries to falsify the leading cause.
 - **Explanation** — writes the one-paragraph summary.
 
-In the UI: “Nemotron: column mapper”, “Nemotron: cause finder”, etc. Do not show
-model IDs or API details to the user.
+In the UI: “NVIDIA Nemotron: column mapper”, “NVIDIA Nemotron: cause finder”,
+etc. Do not show model IDs or API details to the user.
+
+**Tavily** is the external research layer. In the UI: “Tavily research: public
+troubleshooting leads”. It runs on uncertain results only and never becomes
+evidence.
 
 ## 4. The differential table
 
@@ -94,6 +98,10 @@ Use exactly these columns:
 
 - Start with what happened, then what to do: “Coolant flow and pressure both
   moved. Inspect the coolant loop.”
+- Explain the alert level when it appears: robust z is
+  `0.6745 × |value − median| / MAD`; `0.6745 = Φ⁻¹(0.75)`, so 3.5z is about a
+  0.047% two-sided normal tail. It is an editable statistical screening level,
+  not a physics-derived tolerance. 5z is the separate coverage policy.
 - Name the sensor label, not the raw column, when a label exists.
 - Say “the checked signals” when coverage is partial.
 - Say “the data is not enough” instead of “insufficient evidence”.
@@ -113,18 +121,31 @@ Use exactly these columns:
 
 ## 6. Page-level constraints
 
-Keep the current Streamlit layout, pages, cards, colors, and navigation. The
-hybrid changes:
+Keep the current visual language, cards, colors, and navigation items. The
+current product surfaces are:
 
-- the result badge and the action card (new words above);
-- the “Why” section (plain-language evidence, not enum names);
-- a new **Differential** card on the result page (the table above);
-- the **Audit** tab (evidence IDs, raw status, model role, payload size);
-- the advanced tool-model editor (see [`YAML_GUIDE.md`](YAML_GUIDE.md));
-- the benchmark page (honest summary; see [`EVALUATION.md`](EVALUATION.md)).
+- **Start here** — positioning, the problem, personas, the six outcomes, and
+  demo entry points. It must not duplicate the architecture page.
+- **How it works** — the AI reasoning layer, the deterministic decision layer,
+  the proof surface, server status, and the tool-model guide.
+- **Run troubleshooting** — input, optional engineer settings, then the result.
+- **FabAgent vs frontier LLM** — the measured benchmark and its caveats,
+  including that the eight-case table is a workflow comparison, not a pure gate
+  ablation.
+- **Project & contact** — repository, hosted demo, and video links.
 
-Do not add a new navigation item unless it replaces an existing one. Do not
-redesign the home page. Do not change the demo flow.
+The result page is intentionally small:
+
+1. the Python-owned answer card;
+2. the **Result & AI explanation** tab (telemetry findings, differential,
+   coverage, one telemetry table, NVIDIA Nemotron explanation);
+3. the **Tavily research** tab.
+
+Raw evidence IDs, statistics, payload size, model roles, and challenge details
+belong in the collapsed **Technical audit** expander, not in the main result.
+Do not add a new navigation item unless it replaces an existing one. Do not show
+the expected demo result before the run; the demo must be judged by the run, not
+by a label.
 
 ## 7. Examples
 

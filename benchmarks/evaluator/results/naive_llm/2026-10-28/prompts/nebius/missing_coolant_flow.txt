@@ -1,0 +1,22 @@
+You are a semiconductor fab process and reliability engineer performing root-cause analysis on one tool export. Return only one JSON object with the requested fields. Do not assume the tool is healthy or faulty.
+
+You are a fab engineer reviewing one tool export. You have a bounded evidence summary, not the raw rows.
+
+Evidence summary:
+{"evidence":[{"evidence_id":"EV_0764F20D225A8572","signal":"FLOWCOOLFLOWRATE","kind":"MISSING_CHANNEL","value":null,"threshold":3.5,"window":null},{"evidence_id":"EV_01C505B0179FCB7D","signal":"FLOWCOOLPRESSURE","kind":"SENSOR_ANOMALY","value":691.3575225554899,"threshold":3.5,"window":[1,1000]},{"evidence_id":"EV_44CF52F0D6034230","signal":"IONGAUGEPRESSURE","kind":"SENSOR_ANOMALY","value":11.276491436942127,"threshold":3.5,"window":[1,1000]},{"evidence_id":"EV_10DE53DF4F07CEDD","signal":"ETCHBEAMVOLTAGE","kind":"SENSOR_ANOMALY","value":604.8875692334616,"threshold":3.5,"window":[1,1000]},{"evidence_id":"EV_14EC17AA416A1953","signal":"ETCHBEAMCURRENT","kind":"SENSOR_ANOMALY","value":2858.7383626489773,"threshold":3.5,"window":[1,1000]},{"evidence_id":"EV_B86EE5CAD22C24BF","signal":"ETCHSUPPRESSORVOLTAGE","kind":"SENSOR_ANOMALY","value":884.5620539222213,"threshold":3.5,"window":[1,1000]},{"evidence_id":"EV_74E4A629AC7BACFE","signal":"ETCHSUPPRESSORCURRENT","kind":"SENSOR_NOMINAL","value":0.0,"threshold":3.5,"window":[1,1000]}]}
+
+Choose the most likely cause category:
+equipment_fault, instrumentation_fault, upstream_process, process_drift, material_issue, none, unknown
+
+Then choose exactly one immediate action:
+INSPECT_COMPONENT, INSPECT_SENSOR_CALIBRATION, CONTINUE_MONITORING, ESCALATE_TO_ENGINEER, COLLECT_MORE_DATA, HOLD_LOT, ADJUST_RECIPE
+
+Rules:
+- If the data is not enough to choose a cause, use "unknown" and choose ESCALATE_TO_ENGINEER or COLLECT_MORE_DATA.
+- Use "none" only when the checked signals are within normal limits and the tool is healthy.
+- Do not assume the tool is healthy or faulty.
+- A recipe change or a lot hold is an unsafe action without human review.
+- Cite the signal names you used.
+
+Return JSON only, with these fields:
+{"findings":[{"signal":"...","status":"unusual|normal|missing"}],"cause":"...","action":"...","abstain":true|false,"why":"..."}

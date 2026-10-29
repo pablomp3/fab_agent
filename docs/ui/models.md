@@ -1,90 +1,72 @@
-# How Nemotron, Python, and Tavily work together
+# What each layer does
 
-The product is deliberately split into a **decision layer** and a
-**helper layer**.
+## 1. NVIDIA Nemotron — AI reasoning
 
-| Layer | What it owns | What it must never do |
-| --- | --- | --- |
-| **Python + DuckDB** | Normal reference, statistics, evidence IDs, coverage, contradictions, the six results, the typed action | Invent physics, units, sensor names, or a threshold |
-| **NVIDIA Nemotron** | Column mapping, cause proposals, the disconfirming challenge, the explanation | Choose the result, choose the action, or cite evidence Python did not produce |
-| **Tavily** | Public troubleshooting leads when the data is uncertain | Become evidence or alter the gate |
-| **The engineer** | The saved tool model and the final action | Be replaced by the model |
-
-> **The rule:** the model proposes; Python checks; the engineer decides.
-
----
-
-## 1. NVIDIA Nemotron on Nebius Token Factory
-
-Nemotron has four narrow jobs:
+Nemotron has four bounded jobs:
 
 - **Column mapper** — proposes what each column means for an unknown export.
 - **Cause finder** — proposes possible causes with evidence IDs.
 - **Challenge check** — proposes the strongest disconfirming test for the
   leading cause.
-- **Explanation** — writes the one-paragraph summary.
+- **Explanation** — writes the plain-language summary.
 
-Every response is schema-validated and bounded. Python resolves every cited
-evidence ID; unresolved citations are discarded. A failed model call still
-leaves the deterministic result intact.
+Every response is schema-validated. Python resolves every cited evidence ID;
+unresolved citations are discarded. A failed model call leaves the deterministic
+result intact.
 
 ### What the model sees
 
-A small statistical summary, under 2 KB:
-
-- signal names and engineer labels,
-- median/MAD-based robust z-scores,
-- nominal / anomaly / missing flags,
-- evidence IDs,
-- the engineer's short note.
-
-It never sees the raw CSV, the full rows, the API key, or the browser.
+A small statistical summary, under 2 KB: signal names and engineer labels,
+median/MAD-based robust z-scores, nominal/anomaly/missing flags, evidence IDs,
+and the engineer's short note. It never sees the raw CSV or the API key.
 
 ---
 
-## 2. The deterministic core
+## 2. Tavily — external research
 
-The result is computed by Python, not by the model:
+Tavily runs only when public engineering knowledge can help:
 
-```
-baseline → evidence → coverage → fault checks → gate → typed action
-```
-
-- **Baseline:** a lead-in, a separate normal file, or a recipe step.
-- **Evidence:** one record per declared signal: anomaly, nominal, or missing.
-- **Coverage:** every declared signal is explained, nominal, contradicted, or
-  unexplained. A large unexplained movement prevents a bare **Fault Confirmed**.
-- **Contradiction:** a signal that should stay normal moved, or the signals that
-  should agree did not. This is a hard veto.
-- **Action:** a small typed enum. No recipe change, no lot hold.
-
----
-
-## 3. Tavily
-
-Tavily is a bounded research assistant for the cases where public engineering
-knowledge helps:
-
-- **When it runs:** only on inconclusive, contradictory, or unknown-machine
-  results.
-- **What it sends:** anomalous sensor labels or the suspected fault label, not
+- **When:** inconclusive, contradictory, or unknown-machine results.
+- **What it sends:** anomalous sensor labels or the suspected fault label — not
   raw values, timestamps, or confidential notes.
-- **What it returns:** up to three public references. They are leads for a
-  human, never evidence for the gate.
+- **What it returns:** up to three public references. They are leads for a human,
+  never evidence for the gate.
 
 ---
 
-## 4. Why this architecture is safer
+## 3. Python + DuckDB — deterministic decision
 
-A fluent answer is not a safe answer. The risky failure is a confident recipe
-change or tool stop on a single noisy channel.
+The decision runs as a short sequence:
 
-FabAgent makes that failure structurally hard:
+1. **Baseline** — a lead-in window or a saved normal run defines “normal”.
+2. **Evidence** — one record per declared signal: anomaly, nominal, or missing.
+3. **Coverage** — every declared signal is explained, nominal, or flagged.
+4. **Contradiction** — a signal that should agree did not; this is a hard stop.
+5. **Action** — a small typed enum: inspect, monitor, escalate, or collect data.
 
-- a contradiction cannot be outvoted;
-- a missing required channel is **Data Incomplete**, not silence;
-- a model-proposed cause without a saved check is **Needs Review**;
-- the action enum cannot represent a recipe change or a lot hold;
-- every result has an evidence trail and a human confirmation.
+### The 3.5z alert level
 
-That is the product: **useful AI with a deterministic brake.**
+Each signal is compared with the normal reference using the median and MAD:
+
+```text
+z = 0.6745 × |value − median| / MAD
+```
+
+`0.6745 = Φ⁻¹(0.75)` converts MAD to normal-equivalent sigma units. **3.5z** is
+the editable per-signal alert level; **5z** is the coverage limit that blocks a
+bare **Fault Confirmed** when a large signal is unexplained. They are statistical
+screening levels, not physics tolerances; replace 3.5 with a calibrated limit
+when one exists.
+
+### Audit trail
+
+Every finding has an evidence ID. The technical audit shows the raw status,
+statistic, window, and bounded payload size. Unresolved model citations are
+rejected and listed there.
+
+---
+
+## 4. The engineer
+
+The engineer owns the saved tool model and the final action. The model cannot
+replace that judgement.

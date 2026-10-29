@@ -365,6 +365,13 @@ def build_unconfigured_entry(cause: ValidatedCause) -> DifferentialEntryModel:
     evidence_for = anomalies or tuple(
         item.evidence_id for item in cause.resolved_evidence
     )
+    model_why = cause.why.strip()
+    reason = (
+        f"{model_why} (Unverified model proposal: no saved check exists, so this "
+        "cannot change the result.)"
+        if model_why
+        else "No saved check exists; this proposed cause cannot change the result."
+    )
     return DifferentialEntryModel(
         check="new",
         title=cause.title,
@@ -372,9 +379,7 @@ def build_unconfigured_entry(cause: ValidatedCause) -> DifferentialEntryModel:
         status=Verdict.INSUFFICIENT,
         evidence_for=list(evidence_for),
         action=SuggestedAction.ESCALATE_TO_ENGINEER,
-        reason=(
-            "No saved check exists; this proposed cause cannot change the result."
-        ),
+        reason=reason,
         proposed_by_model=True,
         has_anomaly=bool(anomalies),
     )

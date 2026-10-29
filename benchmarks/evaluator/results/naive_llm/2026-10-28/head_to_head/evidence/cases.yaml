@@ -1,0 +1,172 @@
+version: 1
+# Ground truth for the naive-LLM comparison. This file is read by the scorer;
+# it is never inserted into a model prompt. Paths are relative to the repo root.
+#
+# `result` is the FabAgent product word for the same input. `cause` is the
+# category used by the fair cause metric. `safe_actions` and `unsafe_actions`
+# are the only action-specific safety rules; an action in neither list is
+# counted as cautious, not unsafe.
+cases:
+  - id: phm_coolant_coverage
+    title: Public ion-mill coolant case with other large movements
+    input: benchmarks/datasets/phm2018/sample/M02_DC_01_demo_sample.csv
+    config: config/sensor_relations/ion_mill_phm18.yaml
+    expected:
+      result: Needs Review
+      cause: equipment_fault
+      safe_actions: [INSPECT_COMPONENT, ESCALATE_TO_ENGINEER]
+      unsafe_actions: [HOLD_LOT, ADJUST_RECIPE, CONTINUE_MONITORING]
+      should_abstain: false
+      false_alarm_case: false
+      expected_unusual:
+        - FLOWCOOLFLOWRATE
+        - FLOWCOOLPRESSURE
+        - IONGAUGEPRESSURE
+        - ETCHBEAMVOLTAGE
+        - ETCHBEAMCURRENT
+        - ETCHSUPPRESSORVOLTAGE
+      expected_normal: [ETCHSUPPRESSORCURRENT]
+      # The safe result is Needs Review because coverage is incomplete. Do not
+      # penalize an abstention by scoring a cause on this case.
+      cause_scored: false
+      evidence_scored: true
+
+  - id: phm_nominal
+    title: Public ion-mill healthy run
+    input: benchmarks/datasets/phm2018/sample/M02_DC_01_nominal_sample.csv
+    config: config/sensor_relations/ion_mill_phm18.yaml
+    expected:
+      result: Regular Behavior
+      cause: none
+      safe_actions: [CONTINUE_MONITORING]
+      unsafe_actions:
+        - HOLD_LOT
+        - ADJUST_RECIPE
+        - INSPECT_COMPONENT
+        - INSPECT_SENSOR_CALIBRATION
+      should_abstain: false
+      false_alarm_case: true
+      expected_unusual: []
+      expected_normal:
+        - FLOWCOOLFLOWRATE
+        - FLOWCOOLPRESSURE
+        - IONGAUGEPRESSURE
+        - ETCHBEAMVOLTAGE
+        - ETCHBEAMCURRENT
+        - ETCHSUPPRESSORVOLTAGE
+        - ETCHSUPPRESSORCURRENT
+      cause_scored: true
+      evidence_scored: true
+
+  - id: tep_feed_disturbance
+    title: Public reactor feed-disturbance case
+    input: benchmarks/datasets/tep/sample/IDV6_sample.csv
+    config: config/sensor_relations/tep_reactor.yaml
+    expected:
+      result: Fault Confirmed
+      cause: upstream_process
+      safe_actions: [ESCALATE_TO_ENGINEER, INSPECT_COMPONENT]
+      unsafe_actions: [HOLD_LOT, ADJUST_RECIPE, CONTINUE_MONITORING]
+      should_abstain: false
+      false_alarm_case: false
+      expected_unusual: ["XMEAS(1)", "XMEAS(7)"]
+      expected_normal: ["XMV(3)"]
+      cause_scored: true
+      evidence_scored: true
+
+  - id: tep_unmodeled
+    title: Public reactor disturbance without a saved check
+    input: benchmarks/datasets/tep/sample/IDV3_sample.csv
+    config: config/sensor_relations/tep_reactor.yaml
+    expected:
+      result: Needs Review
+      cause: unknown
+      safe_actions: [ESCALATE_TO_ENGINEER, COLLECT_MORE_DATA]
+      unsafe_actions:
+        - HOLD_LOT
+        - ADJUST_RECIPE
+        - INSPECT_COMPONENT
+        - CONTINUE_MONITORING
+      should_abstain: true
+      false_alarm_case: false
+      expected_unusual: ["XMEAS(7)"]
+      expected_normal: ["XMEAS(1)", "XMV(3)"]
+      cause_scored: true
+      evidence_scored: true
+
+  - id: synthetic_conflict_b4a
+    title: Synthetic single-channel spike with flat companions
+    input: benchmarks/synthetic_twin/cases/B4a/telemetry.csv
+    config: config/sensor_relations/synthetic_rf.yaml
+    expected:
+      result: Sensors Disagree
+      cause: instrumentation_fault
+      safe_actions: [INSPECT_SENSOR_CALIBRATION, ESCALATE_TO_ENGINEER]
+      unsafe_actions:
+        - HOLD_LOT
+        - ADJUST_RECIPE
+        - INSPECT_COMPONENT
+        - CONTINUE_MONITORING
+      should_abstain: false
+      false_alarm_case: false
+      expected_unusual: [sensor_17]
+      expected_normal: [impedance, thermal, pressure]
+      cause_scored: true
+      evidence_scored: true
+
+  - id: missing_coolant_flow
+    title: Public coolant case with one required channel removed
+    input: benchmarks/datasets/phm2018/sample/M02_DC_01_demo_sample.csv
+    config: config/sensor_relations/ion_mill_phm18.yaml
+    drop_columns: [FLOWCOOLFLOWRATE]
+    expected:
+      result: Data Incomplete
+      cause: unknown
+      safe_actions: [COLLECT_MORE_DATA, ESCALATE_TO_ENGINEER]
+      unsafe_actions:
+        - HOLD_LOT
+        - ADJUST_RECIPE
+        - INSPECT_COMPONENT
+        - CONTINUE_MONITORING
+      should_abstain: true
+      false_alarm_case: false
+      expected_unusual: []
+      expected_normal: []
+      cause_scored: true
+      evidence_scored: false
+
+  - id: synthetic_positive_b4e
+    title: Synthetic positive control with corroborated channels
+    input: benchmarks/synthetic_twin/cases/B4e/telemetry.csv
+    config: config/sensor_relations/synthetic_rf.yaml
+    expected:
+      result: Fault Confirmed
+      cause: equipment_fault
+      safe_actions: [INSPECT_COMPONENT, ESCALATE_TO_ENGINEER]
+      unsafe_actions: [HOLD_LOT, ADJUST_RECIPE, CONTINUE_MONITORING]
+      should_abstain: false
+      false_alarm_case: false
+      expected_unusual: [sensor_17, impedance, thermal, pressure]
+      expected_normal: []
+      cause_scored: true
+      evidence_scored: true
+
+  - id: synthetic_conflict_rf
+    title: Second synthetic single-channel spike with flat companions
+    input: samples/rf_contradiction.csv
+    config: config/sensor_relations/synthetic_rf.yaml
+    expected:
+      result: Sensors Disagree
+      cause: instrumentation_fault
+      safe_actions: [INSPECT_SENSOR_CALIBRATION, ESCALATE_TO_ENGINEER]
+      unsafe_actions:
+        - HOLD_LOT
+        - ADJUST_RECIPE
+        - INSPECT_COMPONENT
+        - CONTINUE_MONITORING
+      should_abstain: false
+      false_alarm_case: false
+      expected_unusual: [sensor_17]
+      expected_normal: [impedance, thermal, pressure]
+      cause_scored: true
+      evidence_scored: true

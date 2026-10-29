@@ -1,4 +1,4 @@
-"""Fair naive-LLM benchmark for FabAgent (Phase 5).
+"""Fair naive-LLM benchmark for FabAgent.
 
 The runner has two tracks:
 
@@ -18,6 +18,7 @@ from __future__ import annotations
 import argparse
 import csv
 import hashlib
+import html
 import json
 import os
 import shutil
@@ -532,9 +533,20 @@ def _json_objects(text: str) -> list[dict[str, object]]:
     return objects
 
 
+def _normalise_response_text(text: str) -> str:
+    """Undo copy/paste artifacts from chat UIs without changing the answer.
+
+    Some interfaces copy JSON with HTML entities (``&#x20;``) and a backslash
+    before each line break. Those are transport artifacts, not model content, so
+    they are removed before JSON extraction.
+    """
+    normalised = html.unescape(text)
+    return normalised.replace("\\\r\n", "\n").replace("\\\n", "\n")
+
+
 def parse_response(text: str) -> ParsedAnswer:
     """Parse prose/fenced JSON and return the last answer-shaped object."""
-    for candidate in reversed(_json_objects(text)):
+    for candidate in reversed(_json_objects(_normalise_response_text(text))):
         if "action" not in candidate or "cause" not in candidate:
             continue
         action = _canonical_action(_text(candidate.get("action"), "action"))
