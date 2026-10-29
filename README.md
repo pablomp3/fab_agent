@@ -56,6 +56,9 @@ The model never owns the verdict. If the data is incomplete, the model fails, or
 the cause is not configured, the result is **Needs Review** or **Data
 Incomplete**, not a guess.
 
+The hosted **How it works** page shows the exact model IDs and a live counter of
+the actual Nebius Token Factory and Tavily calls made by the server.
+
 ---
 
 ## The six results

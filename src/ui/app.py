@@ -168,25 +168,36 @@ class _UsageRow(TypedDict):
 
 def _usage_rows() -> list[_UsageRow]:
     baseline = _usage_baseline()
+    counts = {
+        (item.provider, item.model, item.role): item.calls
+        for item in USAGE.snapshot()
+    }
+    configured = [
+        ("Nebius Token Factory", _configured_model_id("MAPPING"), "MAPPING"),
+        ("Nebius Token Factory", _configured_model_id("SYNTHESIS"), "SYNTHESIS"),
+        ("Tavily", "tavily-search", "RESEARCH"),
+    ]
+    keys = configured + sorted(key for key in counts if key not in configured)
     rows: list[_UsageRow] = []
-    for item in USAGE.snapshot():
-        key = (item.provider, item.model, item.role)
-        session_calls = max(0, item.calls - baseline.get(key, 0))
-        if item.provider == "Tavily":
+    for key in keys:
+        provider, model, role = key
+        calls = counts.get(key, 0)
+        session_calls = max(0, calls - baseline.get(key, 0))
+        if provider == "Tavily":
             short = "Tavily"
-        elif item.role == "MAPPING":
+        elif role == "MAPPING":
             short = "Nemotron (mapping)"
-        elif item.role == "SYNTHESIS":
+        elif role == "SYNTHESIS":
             short = "Nemotron (synthesis)"
         else:
-            short = item.role.title()
+            short = role.title()
         rows.append(
             {
-                "provider": item.provider,
-                "model": item.model,
-                "role": item.role,
+                "provider": provider,
+                "model": model,
+                "role": role,
                 "session_calls": session_calls,
-                "server_calls": item.calls,
+                "server_calls": calls,
                 "short": short,
             }
         )
@@ -1158,8 +1169,8 @@ def _render_telemetry_measurements(result: RunResult) -> None:
         st.markdown(
             "Each declared signal is compared with the normal reference using "
             "the median and MAD. The peak absolute score is:\n\n"
-            "`z = 0.6745 × |value − median| / MAD`\n\n"
-            "`0.6745 = Φ⁻¹(0.75)` makes this normal-equivalent sigma. **3.5z** "
+            "z = 0.6745 × |value − median| / MAD\n\n"
+            "0.6745 = Φ⁻¹(0.75) makes this normal-equivalent sigma. **3.5z** "
             "is the editable per-signal alert; **5z** is the coverage limit that "
             "blocks a bare **Fault Confirmed** when a large signal is unexplained. "
             "They are screening levels, not physics tolerances; use a calibrated "
@@ -1753,6 +1764,9 @@ def _render_sidebar(live_configured: bool, tavily_configured: bool) -> None:
             "Maps unknown columns · proposes causes · challenges the leader · "
             "writes the explanation."
         )
+        st.caption(
+            "Mapping: Nemotron 3 Ultra · Reasoning: Nemotron 3.5 Lightning"
+        )
 
         st.markdown("**Tavily research**")
         if tavily_configured:
@@ -1765,20 +1779,18 @@ def _render_sidebar(live_configured: bool, tavily_configured: bool) -> None:
 
         st.markdown("### Live usage")
         usage = _usage_rows()
-        if usage:
-            session_total = sum(row["session_calls"] for row in usage)
-            server_total = sum(row["server_calls"] for row in usage)
+        session_total = sum(row["session_calls"] for row in usage)
+        server_total = sum(row["server_calls"] for row in usage)
+        st.caption(
+            f"{session_total} call(s) this session · {server_total} since "
+            "server start"
+        )
+        for row in usage:
             st.caption(
-                f"{session_total} call(s) this session · {server_total} since "
-                "server start"
+                f"{row['short']}: {row['session_calls']} this session "
+                f"· {row['server_calls']} total"
             )
-            for row in usage:
-                st.caption(
-                    f"{row['short']}: {row['session_calls']} this session "
-                    f"· {row['server_calls']} total"
-                )
-        else:
-            st.caption("No live calls yet. Offline fixture runs are not counted.")
+        st.caption("Offline fixture runs are not counted.")
 
         st.divider()
         st.markdown("### Deterministic decision layer")
@@ -1908,24 +1920,18 @@ def _page_models() -> None:
         "session since the process started."
     )
     usage = _usage_rows()
-    if usage:
-        _table(
-            [
-                {
-                    "Provider": row["provider"],
-                    "Model / service": row["model"],
-                    "Role": row["role"],
-                    "This session": row["session_calls"],
-                    "Server total": row["server_calls"],
-                }
-                for row in usage
-            ]
-        )
-    else:
-        st.info(
-            "No live calls in this process yet. Run a case with a server key to "
-            "populate the counter."
-        )
+    _table(
+        [
+            {
+                "Provider": row["provider"],
+                "Model / service": row["model"],
+                "Role": row["role"],
+                "This session": row["session_calls"],
+                "Server total": row["server_calls"],
+            }
+            for row in usage
+        ]
+    )
 
     st.divider()
     st.subheader("The tool model an engineer edits")
@@ -2063,6 +2069,21 @@ def _metric_text(
     return f":{tone}[**{text}**]" if tone is not None else text
 
 
+def _score_text(stats: _ProviderStats) -> str:
+    """Compact table score: safe actions + correct causes + abstentions."""
+    total = (
+        (stats["n"] - stats["unsafe"])
+        + stats["cause_ok"]
+        + stats["abst_ok"]
+    )
+    maximum = stats["n"] + stats["cause_n"] + stats["abst_n"]
+    if maximum <= 0:
+        return presentation.MISSING
+    ratio = total / maximum
+    tone = "green" if total == maximum else ("red" if ratio < 0.7 else "orange")
+    return f":{tone}[**{total}/{maximum} pts**]"
+
+
 def _benchmark_display_rows(
     rows: Sequence[Mapping[str, object]],
     case_records: Sequence[Mapping[str, object]] = (),
@@ -2130,6 +2151,9 @@ def _benchmark_display_rows(
                 false_alarm_n,
                 "green" if false_alarm == 0 else "red",
             )
+        display_row["Score"] = (
+            _score_text(item) if item is not None else presentation.MISSING
+        )
         display.append(display_row)
     return display
 
@@ -2187,10 +2211,12 @@ def _head_to_head_case_rows(
         ("Gemini 3.8 Flash", "gemini"),
         ("GPT-5.6 Luna", "openai"),
     )
+    index = 0
     for case_id, label in _CASE_LABELS.items():
         if not any((case_id, provider) in by_key for _, provider in providers):
             continue
-        row: dict[str, object] = {"Case": label}
+        index += 1
+        row: dict[str, object] = {"#": index, "Case": label}
         for column, provider in providers:
             record = by_key.get((case_id, provider))
             if record is None:
@@ -2205,27 +2231,6 @@ def _head_to_head_case_rows(
             row[column] = text
         rows.append(row)
     return rows
-
-
-def _total_sentence(
-    rows: Sequence[Mapping[str, object]],
-    case_records: Sequence[Mapping[str, object]],
-) -> str:
-    parts: list[str] = []
-    for row in rows:
-        raw_system = str(row.get("system", presentation.MISSING))
-        system = _display_system(raw_system)
-        provider = _system_provider(raw_system)
-        if provider is None:
-            continue
-        stats = _provider_stats(case_records, provider)
-        if stats is None:
-            continue
-        parts.append(
-            f"{system}: {stats['n'] - stats['unsafe']}/{stats['n']} safe, "
-            f"{stats['cause_ok']}/{stats['cause_n']} correct causes"
-        )
-    return "; ".join(parts)
 
 
 def _page_performance() -> None:
@@ -2291,7 +2296,12 @@ def _page_performance() -> None:
         "published with the datasets. These known-answer tests prove the decision "
         "pattern; field accuracy needs a real fab pilot."
     )
+    st.caption(
+        "**Score** = safe actions + correct causes + appropriate abstentions. "
+        "It is a compact view of the same table, not a new metric."
+    )
 
+    st.divider()
     evidence = _head_to_head_track(head, "evidence")
     raw = _head_to_head_track(head, "raw")
 
@@ -2300,9 +2310,6 @@ def _page_performance() -> None:
         if rows:
             st.subheader("Benchmark 1 — FabAgent vs frontier LLM (only prompts)")
             _table(_benchmark_display_rows(rows, records))
-            totals = _total_sentence(rows, records)
-            if totals:
-                st.caption(f"**Totals:** {totals}.")
             st.caption(
                 "Four completed cases. The models receive the same neutral "
                 "prompt and bounded evidence summary. Cause is scored only where "
@@ -2314,6 +2321,7 @@ def _page_performance() -> None:
                 st.markdown("#### What each model recommended")
                 _table(case_rows)
 
+    st.divider()
     if raw is not None:
         rows, records = _track_table_data(raw)
         if rows:
@@ -2321,14 +2329,12 @@ def _page_performance() -> None:
                 "Benchmark 2 — FabAgent vs frontier LLM (prompt + raw CSV data)"
             )
             _table(_benchmark_display_rows(rows, records))
-            totals = _total_sentence(rows, records)
-            if totals:
-                st.caption(f"**Totals:** {totals}.")
             st.caption(
                 "Same four completed cases, with the raw CSV attached. This "
                 "tests column reading and mapping as well as the decision."
             )
 
+    st.divider()
     payload = _load_benchmark_payload()
     summary_rows = presentation.benchmark_summary_rows(payload) if payload else []
     ablation = [
@@ -2352,9 +2358,6 @@ def _page_performance() -> None:
                 ablation, ablation_records, include_false_alarm=True
             )
         )
-        totals = _total_sentence(ablation, ablation_records)
-        if totals:
-            st.caption(f"**Totals:** {totals}.")
         st.caption(
             "Eight complete cases. The same model and bounded evidence, but "
             "FabAgent also receives the saved tool-model checks and the Python "
@@ -2363,6 +2366,7 @@ def _page_performance() -> None:
             "coverage case."
         )
 
+    st.divider()
     st.markdown("### What this shows")
     st.markdown(
         "- **FabAgent is the only system that is both safe and correct.** It has "

@@ -181,6 +181,41 @@ class BenchmarkSummaryTests(unittest.TestCase):
         )
         self.assertEqual(presentation.benchmark_summary_rows("nope"), [])
 
+    def test_compact_score_is_safe_plus_cause_plus_abstention(self) -> None:
+        from src.ui import app
+
+        rows = [{"system": "FabAgent (deterministic gate)"}]
+        records = [
+            {
+                "provider": "fabagent",
+                "unsafe": False,
+                "correct_cause": True,
+                "appropriate_abstention": True,
+            },
+            {
+                "provider": "fabagent",
+                "unsafe": False,
+                "correct_cause": None,
+                "appropriate_abstention": None,
+            },
+            {
+                "provider": "fabagent",
+                "unsafe": False,
+                "correct_cause": True,
+                "appropriate_abstention": None,
+            },
+            {
+                "provider": "fabagent",
+                "unsafe": False,
+                "correct_cause": True,
+                "appropriate_abstention": None,
+            },
+        ]
+
+        display = app._benchmark_display_rows(rows, records)  # pyright: ignore[reportPrivateUsage]
+
+        self.assertEqual(display[0]["Score"], ":green[**8/8 pts**]")
+
 
 class PageSourceTests(unittest.TestCase):
     def test_performance_page_no_longer_has_the_old_chart(self) -> None:

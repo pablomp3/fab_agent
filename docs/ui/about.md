@@ -1,67 +1,79 @@
-# A fab copilot that shows its evidence
+## The problem
 
-A semiconductor tool streams hundreds of channels. When an alarm fires, an
-engineer has to decide whether a coolant drop is a real equipment fault, a
-failing sensor, a downstream symptom, or normal recipe behaviour.
+A fab tool alarms. The engineer has minutes to decide what to do. Three things
+make that hard:
 
-**FabAgent turns that CSV into one defensible next step.** It builds a normal
+- **The signal is ambiguous.** A coolant drop can be a real leak, a failing
+  sensor, a downstream symptom, or normal recipe behaviour.
+- **The wrong action is expensive.** A missed fault scraps wafers; a false alarm
+  stops a tool; a recipe change on one noisy channel can do both.
+- **The evidence is hard to hold together.** Hundreds of channels, missing data,
+  and contradictory sensors arrive faster than a human can check them. A fluent
+  LLM will still guess.
+
+**FabAgent turns that export into one defensible next step.** It builds a normal
 reference, scores every declared signal, checks the engineer's saved fault
-patterns, and returns one of six plain results — with the evidence and the
-contradiction attached.
+patterns, and returns one of six plain results with the evidence attached.
 
 > **NVIDIA Nemotron reasons. Tavily researches. Python checks. The engineer decides.**
 
 ---
 
-## Why it matters
+## What you get
+
+| Result | What it means | What to do |
+| --- | --- | --- |
+| **Fault Confirmed** | The evidence supports the suspected fault. | Inspect the named part. |
+| **Regular Behavior** | Every checked signal is normal. | Keep monitoring. |
+| **Sensors Disagree** | One signal moved; the signals that should agree did not. | Check the sensor first. |
+| **Data Incomplete** | A required signal is missing. | Get the missing data. |
+| **Needs Review** | The data is not enough to confirm or rule out a cause. | Ask an engineer to review. |
+| **Unknown Machine** | The export does not match a saved tool model. | Review the guessed columns. |
+
+Every result comes with a next step, a plain-language reason, and an audit
+trail. The result is computed by Python, so the same input and the same tool
+model give the same answer.
+
+---
+
+## Built for manufacturing tools, with a focus on semiconductor fabs
+
+The first target is semiconductor tool telemetry: etch, deposition, ion mill,
+RF stations, and the public PHM/TEP benchmarks. The same evidence-gated workflow
+applies to any instrumented manufacturing tool that exports sensor telemetry —
+injection moulding, industrial robotics, energy equipment.
+
+---
+
+## Who it is for
 
 | Persona | What is expensive today | What FabAgent changes |
 | --- | --- | --- |
-| **Junior engineer** | Hundreds of time series, unfamiliar alarms, no clear next step | One plain result, one safe action, and the exact signals behind it |
+| **Junior engineer** | Hundreds of time series, unfamiliar alarms, no clear next step | One plain result, one safe action, and the signals behind it |
 | **Senior process engineer** | Black-box AI, hidden thresholds, unauditable advice | An editable tool model, visible checks, and a full audit trail |
-| **Fab operations** | False alarms, unnecessary downtime, a recipe change on one noisy channel | Sensor conflicts are caught before a recipe change; missing data fails closed |
+| **Operations manager** | False alarms, unnecessary downtime, a recipe change on one noisy channel | Sensor conflicts are caught before a recipe change; missing data fails closed |
 
-The value is not “another chatbot.” It is **decision hygiene**: the same input
-gives the same answer, every claim is traceable, and the system abstains when
+The value is **decision hygiene**: the AI adds
+reasoning and research, Python owns the decision, and the system abstains when
 the data cannot support an action.
 
 ---
 
-## How a run works
+## Hard limits, enforced by the type system
 
-1. **Read the export.** The CSV is matched to a saved tool model, or Auto mode
-   drafts one.
-2. **Build normal and evidence.** A lead-in or saved normal file defines
-   “normal”; every declared signal becomes an anomaly, nominal, or missing
-   record with an evidence ID.
-3. **Ask Nemotron to help.** It maps unknown columns, proposes causes, and
-   challenges the leading cause. Tavily adds public leads only when the data is
-   uncertain.
-4. **Let Python decide.** Python resolves every citation, applies coverage and
-   contradictions, and returns one of six results with one safe next step.
+These are not policy promises. They are properties of the code:
 
----
-
-## What makes it different
-
-- **The gate is deterministic.** DuckDB builds the statistics; Python owns the
-  result and the action.
-- **The model is useful, not authoritative.** Nemotron never owns the verdict.
-- **Contradictions are absolute.** If a signal moves but the channels that
-  should agree stay flat, the result is **Sensors Disagree**, not a fault.
-- **Nothing large is hidden.** “What else moved” lists every unexplained
-  declared signal; a large one prevents a bare **Fault Confirmed**.
-- **The action is typed.** There is no recipe change and no lot hold in the
-  action set. A human confirms the next step.
-
----
-
-## What FabAgent will never do
-
-- **Never change a recipe or hold a lot.** A human confirms every action.
-- **Never treat model prose as evidence.** Every citation is resolved against
-  the data.
-- **Never invent tool physics.** Unknown units and thresholds stay `None`.
-- **Never send raw telemetry to the model.** Only a bounded summary leaves the
-  process.
-- **Never hide a missing channel or an unexplained anomaly.**
+- **It cannot change a recipe or hold a lot.** In a fab, a wrong recipe edit can
+  scrap wafers and a lot hold can stop a line. FabAgent’s action is a closed
+  enum — inspect the part, keep monitoring, ask an engineer, collect more data,
+  or check the sensor. A recipe edit is not representable.
+- **It cannot promote a model guess into a fault.** A cause proposed by NVIDIA
+  Nemotron without a saved check is **Needs Review**, never **Fault Confirmed**.
+- **It cannot outvote a contradiction.** If a signal moves and the channels that
+  should agree stay flat, the result is **Sensors Disagree**.
+- **It cannot hide missing data.** A required channel that is absent becomes
+  **Data Incomplete**.
+- **It cannot send raw telemetry to the model.** Only a bounded statistical
+  summary crosses the network, and every citation is re-resolved by Python.
+- **It cannot confirm a fault while a large signal is unexplained.** The 5z
+  coverage policy prevents a bare **Fault Confirmed**.

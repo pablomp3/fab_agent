@@ -59,9 +59,7 @@ The decision runs as a short sequence:
 
 Each signal is compared with the normal reference using the median and MAD:
 
-```text
-z = 0.6745 × |value − median| / MAD
-```
+**z = 0.6745 × |value − median| / MAD**
 
 `0.6745 = Φ⁻¹(0.75)` converts MAD to normal-equivalent sigma units. **3.5z** is
 the editable per-signal alert level; **5z** is the coverage limit that blocks a

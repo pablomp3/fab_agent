@@ -8,7 +8,7 @@ product.
 
 | Check | Command | Result |
 |---|---|---|
-| Unit tests | `.venv/bin/python -m unittest discover -s tests -q` | 205 tests, OK |
+| Unit tests | `.venv/bin/python -m unittest discover -s tests -q` | 206 tests, OK |
 | Lint | `.venv/bin/ruff check .` | clean |
 | Types | `.venv/bin/basedpyright` | 0 errors, 0 warnings |
 | Adversarial abstention | `PYTHONPATH=. .venv/bin/python benchmarks/evaluator/synthetic_abstention_runner.py` | GREEN, 0 LLM calls |
