@@ -145,8 +145,8 @@ usage**.
 
 > Nemotron has four bounded jobs. Unknown-machine mapping uses Nemotron 3 Ultra;
 > cause finding, challenge, and explanation use Nemotron 3.5 Lightning. Tavily
-> runs only when the result is uncertain. The usage table is live: it counts the
-> actual Nebius Token Factory and Tavily calls, not offline fixtures.
+> runs only when the result is uncertain. The usage table starts at zero and
+> counts the actual Nebius Token Factory and Tavily calls, not offline fixtures.
 
 Point to the exact model IDs and the per-model counts.
 
@@ -156,14 +156,14 @@ Point to the exact model IDs and the per-model counts.
 
 **Page:** FabAgent vs frontier LLM
 
-**Show:** Benchmark 1 and Benchmark 3. Do not read every number.
+**Show:** Benchmark 1 and Benchmark 3. Point to the **Score** column, then do not
+read every number.
 
 **Say:**
 
-> On a fixed known-answer set, FabAgent made zero unsafe actions. Gemini made one
-> unsafe call on missing data; GPT-5.6 stayed safe but rarely committed to a
-> cause. The eight-case workflow comparison is 0/8 versus 2/8 unsafe. This is a
-> workflow comparison, not a pure gate ablation, and not field accuracy.
+> On a fixed known-answer set, FabAgent scores 8/8; Gemini 4/8; GPT-5.6 6/8. On
+> the eight-case workflow comparison it is 17/17 versus 6/17. This is a workflow
+> comparison, not a pure gate ablation, and not field accuracy.
 
 ---
 
