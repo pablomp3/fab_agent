@@ -87,7 +87,7 @@ _BEHAVIOR_LABELS = {
     "contradiction": "One sensor only (contradiction)",
 }
 
-# The one-click demo should lead with a semiconductor case, not the
+# The primary Start here demo should lead with a semiconductor case, not the
 # cross-industry TEP reactor. The synthetic coolant case is a clean positive
 # control; the video can then show the real PHM case and its honest abstention.
 RECOMMENDED_DEMO_KEY = "synthetic_flowcool_supported"
@@ -174,6 +174,35 @@ def _usage_inline(row: _UsageRow) -> str:
     return (
         f":green[**{row['session_calls']} {unit}{plural}**] "
         f":gray[**({row['server_calls']} total)**]"
+    )
+
+
+def _usage_inline_html(row: _UsageRow) -> str:
+    is_search = row["provider"] == "Tavily"
+    unit = "search" if is_search else "call"
+    singular = row["session_calls"] == 1
+    plural = "" if singular else ("es" if is_search else "s")
+    return (
+        f"<span style='color:#1F8A4C;font-weight:700'>"
+        f"{row['session_calls']} {unit}{plural}</span> "
+        f"<span style='color:#7B8794;font-weight:700'>"
+        f"({row['server_calls']} total)</span>"
+    )
+
+
+def _usage_model_block(
+    name: str,
+    color: str,
+    row: _UsageRow,
+    subtitle: str,
+) -> None:
+    st.markdown(
+        "<div style='line-height:1.2;margin:0 0 0.45rem 0'>"
+        f"<span style='color:{color};font-weight:700'>{name}</span> "
+        f"{_usage_inline_html(row)}"
+        "<br><span style='color:#52606D;font-size:0.78rem'>"
+        f"{subtitle}</span></div>",
+        unsafe_allow_html=True,
     )
 
 
@@ -1543,14 +1572,13 @@ def _render_demo_runner(demo_mode: bool, use_tavily: bool) -> None:
         )
 
     st.markdown("### Step 2 — Run the analysis")
-    auto_run = bool(st.session_state.pop("auto_run_demo", False))
     run_clicked = st.button(
         "🚀 Run analysis on this dataset",
         type="primary",
         key=f"run_{case.key}",
         use_container_width=True,
     )
-    if run_clicked or auto_run:
+    if run_clicked:
         try:
             data = case.csv_path.read_bytes()
         except OSError as exc:
@@ -1791,21 +1819,28 @@ def _render_sidebar(live_configured: bool, tavily_configured: bool) -> None:
         synthesis = _usage_for(usage, "Nebius Token Factory", "SYNTHESIS")
         tavily = _usage_for(usage, "Tavily", "RESEARCH")
 
-        st.markdown(
-            f":violet[**NVIDIA Nemotron 3 Ultra**] · {_usage_inline(mapping)}"
+        _usage_model_block(
+            "NVIDIA Nemotron 3 Ultra",
+            "#7B3FF2",
+            mapping,
+            "Unknown-machine mapping",
         )
-        st.caption("Unknown-machine mapping")
-        st.markdown(
-            f":blue[**NVIDIA Nemotron 3.5 Lightning**] · "
-            f"{_usage_inline(synthesis)}"
+        _usage_model_block(
+            "NVIDIA Nemotron 3.5 Lightning",
+            "#0B6E99",
+            synthesis,
+            "Cause finding, challenge, explanation",
         )
-        st.caption("Cause finding, challenge, explanation")
-        st.markdown(f":orange[**Tavily research**] · {_usage_inline(tavily)}")
         if tavily_configured:
-            st.caption(":green[● Live for uncertain results]")
+            st.caption(":green[● Live on Tavily]")
         else:
-            st.caption(":gray[● No server key · external leads skipped]")
-        st.caption("Live calls only; offline fixture runs are not counted.")
+            st.caption(":gray[● No server key · Tavily skipped]")
+        _usage_model_block(
+            "Tavily research",
+            "#C2410C",
+            tavily,
+            "Public leads on uncertain results",
+        )
 
         st.divider()
         st.markdown("### Deterministic decision layer")
@@ -1858,23 +1893,24 @@ def _page_about() -> None:
     st.markdown("#### Start with a prepared case")
     demo_col, conflict_col, how_col = st.columns(3)
     if demo_col.button(
-        "🚀 Try a one-click demo",
+        "🚀 Try the demo",
         type="primary",
         width="stretch",
-        help="Run a clean semiconductor coolant positive control in one click.",
+        help=(
+            "Open the semiconductor coolant positive control, then click "
+            "Run analysis."
+        ),
     ):
-        st.session_state["auto_run_demo"] = True
         st.session_state["demo_choice"] = RECOMMENDED_DEMO_KEY
         st.switch_page(_RUN_PAGE)
     if conflict_col.button(
         "See a sensor conflict",
         width="stretch",
         help=(
-            "Show an RF sensor that disagrees with its companions, plus live "
-            "Tavily research."
+            "Open the RF sensor-conflict case, then click Run analysis to see "
+            "the live Tavily research."
         ),
     ):
-        st.session_state["auto_run_demo"] = True
         st.session_state["demo_choice"] = "synthetic_rf_veto"
         st.switch_page(_RUN_PAGE)
     if how_col.button(
@@ -1933,9 +1969,8 @@ def _page_models() -> None:
     _table(rows)
     st.caption(
         "Exact model IDs are read from `config/models.yaml`; environment "
-        "overrides are reflected here. Calls are live HTTP calls only: offline "
-        "fixture runs are not counted, and server total includes every session "
-        "since the process started."
+        "overrides are reflected here. Counts are actual HTTP calls; server "
+        "total includes every session since the process started."
     )
 
     st.divider()
@@ -2476,6 +2511,7 @@ def main() -> None:
             "stale. A hard refresh is not enough."
         )
         st.stop()
+    _usage_baseline()
     page = st.navigation(
         {
             "Start here": [
@@ -2509,8 +2545,9 @@ def main() -> None:
         position="sidebar",
         expanded=True,
     )
-    _render_sidebar(live_configured, tavily_configured)
+    # Run the page first so the sidebar sees the calls made by this rerun.
     page.run()
+    _render_sidebar(live_configured, tavily_configured)
 
 
 if __name__ == "__main__":

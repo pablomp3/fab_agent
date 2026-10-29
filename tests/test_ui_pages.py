@@ -250,6 +250,12 @@ class AppTestSmokeTests(unittest.TestCase):
         self.assertTrue(
             any("manufacturing copilot" in item.value for item in app_test.title)
         )
+        sidebar = " ".join(item.value for item in app_test.sidebar.markdown)
+        self.assertIn("NVIDIA Nemotron 3 Ultra", sidebar)
+        self.assertIn("NVIDIA Nemotron 3.5 Lightning", sidebar)
+        self.assertIn("Tavily research", sidebar)
+        self.assertIn("0 calls", sidebar)
+        self.assertIn("0 searches", sidebar)
 
 
 if __name__ == "__main__":

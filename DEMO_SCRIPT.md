@@ -13,7 +13,8 @@
 3. Confirm the sidebar shows **NVIDIA Nemotron: Live** and **Tavily research:
    Live**.
 4. Run one analysis to warm up the model, then start a new incognito session so
-   the recording starts clean.
+   the recording starts clean. The Start here demo buttons now preselect the case;
+   you click **Run analysis** yourself.
 5. Put `samples/unknown_tool.csv` somewhere easy to reach in the file picker.
 6. Set browser zoom to ~110%, hide bookmarks, close notifications, and use a
    clean desktop.
@@ -42,8 +43,9 @@ Do **not** show `.env`, `/etc/fabagent.env`, a terminal, SSH, or raw model outpu
 
 ## 0:15–0:40 — Clean positive control
 
-**Page:** Run troubleshooting  
-**Action:** click **Try a one-click demo** → *Synthetic dataset — coolant excursion*
+**Page:** Start here → Run troubleshooting
+
+**Action:** click **Try the demo** → confirm *Synthetic dataset — coolant excursion* → click **Run analysis on this dataset**
 
 **Say:**
 
