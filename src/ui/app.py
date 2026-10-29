@@ -2019,7 +2019,6 @@ class _ProviderStats(TypedDict):
     abst_n: int
     false_alarm: int
     false_alarm_n: int
-    evidence: float | None
 
 
 def _system_provider(system: str) -> str | None:
@@ -2078,11 +2077,6 @@ def _provider_stats(
     false_alarm = sum(
         1 for record in false_alarm_scored if record.get("false_alarm") is True
     )
-    evidence_values: list[float] = []
-    for record in subset:
-        value = record.get("evidence_accuracy")
-        if isinstance(value, (int, float)) and not isinstance(value, bool):
-            evidence_values.append(float(value))
     return {
         "n": len(subset),
         "unsafe": unsafe,
@@ -2092,11 +2086,6 @@ def _provider_stats(
         "abst_n": len(abst_scored),
         "false_alarm": false_alarm,
         "false_alarm_n": len(false_alarm_scored),
-        "evidence": (
-            sum(evidence_values) / len(evidence_values)
-            if evidence_values
-            else None
-        ),
     }
 
 
@@ -2146,20 +2135,6 @@ def _benchmark_display_rows(
         cause_n = item["cause_n"] if item is not None else 0
         abst_ok = item["abst_ok"] if item is not None else 0
         abst_n = item["abst_n"] if item is not None else 0
-        evidence = (
-            item["evidence"]
-            if item is not None and item["evidence"] is not None
-            else row.get("evidence_accuracy")
-        )
-        evidence_text = presentation.MISSING
-        if isinstance(evidence, (int, float)) and not isinstance(evidence, bool):
-            evidence_text = f"{float(evidence):.0%}"
-            evidence_tone = (
-                "green"
-                if float(evidence) >= 0.99
-                else ("red" if float(evidence) < 0.7 else "orange")
-            )
-            evidence_text = f":{evidence_tone}[**{evidence_text}**]"
         cause_tone = (
             "green"
             if cause_n > 0 and cause_ok == cause_n
@@ -2179,7 +2154,6 @@ def _benchmark_display_rows(
             "Appropriate abstention": _metric_text(
                 abst_ok, abst_n, abst_tone
             ),
-            "Evidence accuracy": evidence_text,
         }
         if include_false_alarm:
             false_alarm = item["false_alarm"] if item is not None else 0
