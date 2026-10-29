@@ -5,7 +5,7 @@
 > Track: **Best Apps and Agents** · City: **Taipei**
 >
 > Positioning: **a manufacturing copilot with a focus on semiconductors** —
-> deterministic troubleshooting and RCA for manufacturing and physical-AI
+> deterministic troubleshooting and RCA for manufacturing and industrial
 > operations.
 
 ---

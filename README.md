@@ -1,7 +1,7 @@
 # FabAgent
 
 **A deterministic troubleshooting and RCA copilot for manufacturing and
-physical-AI operations, with a focus on semiconductor fabs.**
+industrial operations, with a focus on semiconductor fabs.**
 
 > **Nebius × NVIDIA Global AI Hackathon — Best Apps and Agents Track**
 >
@@ -35,8 +35,8 @@ holds a lot.
 A fab tool streams hundreds of channels. When an alarm fires, a junior engineer
 has to decide whether a coolant drop is a real equipment fault, a failing sensor,
 a downstream symptom, or normal recipe behaviour. The same problem appears on any
-instrumented manufacturing line or physical-AI system: the telemetry is rich, the
-time is short, and a wrong action is expensive.
+instrumented manufacturing line: the telemetry is rich, the time is short, and a
+wrong action is expensive.
 
 A naive LLM is fluent but it cannot prove coverage, cannot detect a contradiction
 deterministically, and may recommend a recipe change on a single noisy channel.

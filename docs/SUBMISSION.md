@@ -10,7 +10,7 @@ This file is the actionable checklist.
 FabAgent is a usable app/copilot for a real audience (manufacturing and fab
 engineers), powered by Nemotron on Nebius Token Factory. Position it as a
 **manufacturing copilot with a focus on semiconductors** — deterministic
-troubleshooting and RCA for manufacturing and physical-AI operations, not limited
+troubleshooting and RCA for manufacturing and industrial operations, not limited
 to fabs. The old label “Industrial Copilot & Agentic Root Cause Analysis (RCA)”
 is **not** an official track; do not use it on Devpost or in the UI.
 

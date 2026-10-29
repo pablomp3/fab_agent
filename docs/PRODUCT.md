@@ -1,7 +1,7 @@
 # FabAgent — product definition
 
 **One line:** FabAgent is a deterministic troubleshooting and RCA copilot for
-manufacturing and physical-AI operations, with a focus on semiconductor tools. It
+manufacturing and industrial operations, with a focus on semiconductor tools. It
 turns a CSV export into a small set of evidence records, checks them against a
 saved tool model, and gives the engineer one safe next step — or says plainly
 that the data is not enough.
@@ -19,7 +19,7 @@ FabAgent is built around one rule:
 > **NVIDIA Nemotron reasons. Tavily researches. Python checks. The engineer decides.**
 
 The first target is semiconductor fabs. The same workflow applies to any
-instrumented manufacturing or physical-AI operation that can export a CSV and
+instrumented manufacturing or industrial operation that can export a CSV and
 describe its own tool model.
 
 ## Two ways to use it

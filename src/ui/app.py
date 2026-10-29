@@ -1660,7 +1660,7 @@ def _render_sidebar(live_configured: bool, tavily_configured: bool) -> None:
         st.caption("A manufacturing copilot with a focus on semiconductors")
         st.caption(
             "Deterministic troubleshooting and RCA for manufacturing and "
-            "physical-AI operations."
+            "industrial operations."
         )
 
         with st.popover("📖 Possible outcomes & plain language", width="stretch"):
@@ -1719,7 +1719,7 @@ def _page_about() -> None:
     st.title("FabAgent: a manufacturing copilot with a focus on semiconductors")
     st.markdown(
         "##### Deterministic troubleshooting and root-cause analysis for "
-        "manufacturing and physical-AI operations, with a focus on semiconductor "
+        "manufacturing and industrial operations, with a focus on semiconductor "
         "fabs."
     )
     st.markdown(

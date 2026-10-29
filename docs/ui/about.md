@@ -40,7 +40,7 @@ model give the same answer.
 
 The first target is semiconductor tool telemetry: etch, deposition, ion mill,
 RF stations, and the public PHM/TEP benchmarks. The same evidence-gated workflow
-applies to any manufacturing or physical-AI tool that exports sensor telemetry —
+applies to any instrumented manufacturing tool that exports sensor telemetry —
 injection moulding, industrial robotics, energy equipment.
 
 ---
