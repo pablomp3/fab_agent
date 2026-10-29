@@ -1757,7 +1757,7 @@ def _page_about() -> None:
     st.markdown("#### Start with a prepared case")
     demo_col, conflict_col, how_col = st.columns(3)
     if demo_col.button(
-        "🚀 Try a 30-second demo",
+        "🚀 Try a one-click demo",
         type="primary",
         width="stretch",
         help="Run a clean semiconductor coolant positive control in one click.",

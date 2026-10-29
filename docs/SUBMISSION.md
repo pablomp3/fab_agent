@@ -77,19 +77,21 @@ Before `git push`:
 fault from a failing sensor. A naive LLM will guess; a wrong recipe change is
 expensive.
 
-**0:20–0:50 — Clean semiconductor positive control.** Run the synthetic coolant
-case. Show the result card, the plain-language evidence, and the next step. Say:
-“Python checks; the model explains.”
+**0:20–0:50 — Clean semiconductor positive control.** Choose **Synthetic dataset
+— coolant excursion**. Show the result card, the plain-language evidence, and
+the next step. Say: “This is a seeded positive control. Python checks; the model
+explains.”
 
-**0:50–1:20 — Real public data, honest abstention.** Run the PHM 2018 ion-mill
-case. The coolant pattern is present, but other declared channels also moved, so
-the result is **Needs Review**, not a bare **Fault Confirmed**. Say: “Coverage is
-part of the decision. The system refuses to overclaim.”
+**0:50–1:20 — Real public data, honest abstention.** Choose **PHM 2018 dataset —
+ion mill coolant window**. The coolant pattern is present, but other declared
+channels also moved, so the result is **Needs Review**, not a bare **Fault
+Confirmed**. Open **What else moved**. Say: “Coverage is part of the decision.
+The system refuses to overclaim.”
 
-**1:20–1:55 — Sensors Disagree.** Run the RF conflict. Show that one channel
-moved and the companions stayed flat. The result is **Sensors Disagree**, not a
-fault. Open the Tavily tab and show real public leads. Say: “A contradiction is
-absolute; it cannot be outvoted.”
+**1:20–1:55 — Sensors Disagree.** Choose **Synthetic dataset — RF sensor
+conflict**. Show that one channel moved and the companions stayed flat. The
+result is **Sensors Disagree**, not a fault. Open the Tavily tab and show real
+public leads. Say: “A contradiction is absolute; it cannot be outvoted.”
 
 **1:55–2:25 — Auto mode.** Upload the unknown export. Show the column mapper,
 the proposed cause, and the **Unknown Machine** result. Open the draft YAML

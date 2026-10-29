@@ -1,3 +1,8 @@
+[server]
+# The demo only needs a bounded tool export; do not accept multi-hundred-MB
+# uploads on the public VM.
+maxUploadSize = 20
+
 [theme]
 base = "light"
 primaryColor = "#0B6E99"
