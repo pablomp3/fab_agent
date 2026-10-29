@@ -9,6 +9,7 @@ from urllib.error import URLError
 from urllib.request import Request, urlopen
 
 from src.model_config import ModelRoute
+from src.usage import USAGE
 
 _MAX_CATALOG_BYTES = 1_000_000
 _MAX_COMPLETION_BYTES = 8192
@@ -98,6 +99,11 @@ class OpenAICompatibleTransport:
     def complete(
         self, route: ModelRoute, api_key: str, body: bytes
     ) -> CompletionResponse:
+        USAGE.record(
+            provider="Nebius Token Factory",
+            model=route.model,
+            role=route.role,
+        )
         request = Request(
             f"{route.base_url}/chat/completions",
             data=body,

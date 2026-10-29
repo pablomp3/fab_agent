@@ -400,6 +400,11 @@ cause on every scored case.
   alarm on the nominal case. Do not compare this `n=8` table with the `n=4`
   head-to-head.
 - The superseded five-case baseline artifact was removed; it is not used.
+- The benchmark rows exercise the synthesis role with
+  `nvidia/Nemotron-3_5-Lightning`. The product now also uses
+  `nvidia/Nemotron-3-Ultra-550b-a55b` for unknown-machine mapping; the fixed
+  case set does not include an unknown-machine mapping case, so that model change
+  does not rewrite the recorded benchmark.
 
 ## 9. What the UI shows
 

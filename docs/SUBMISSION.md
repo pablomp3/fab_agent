@@ -123,9 +123,9 @@ Add 3–5 concrete bullets:
 - What you would change.
 - Which Nebius services you used (Token Factory; optionally Serverless
   Endpoints/Jobs).
-- Which NVIDIA models you used (`Nemotron-3.5-Lightning` for mapping/fast calls,
-  `Nemotron-3-Ultra` for synthesis/challenge, with exact IDs from
-  `config/models.yaml`).
+- Which NVIDIA models you used, with the exact IDs from `config/models.yaml`:
+  `nvidia/Nemotron-3-Ultra-550b-a55b` for unknown-machine mapping and
+  `nvidia/Nemotron-3_5-Lightning` for cause finding, challenge, and explanation.
 
 ## 7. What to say / not say
 

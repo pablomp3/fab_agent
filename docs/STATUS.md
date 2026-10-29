@@ -8,7 +8,7 @@ product.
 
 | Check | Command | Result |
 |---|---|---|
-| Unit tests | `.venv/bin/python -m unittest discover -s tests -q` | 202 tests, OK |
+| Unit tests | `.venv/bin/python -m unittest discover -s tests -q` | 205 tests, OK |
 | Lint | `.venv/bin/ruff check .` | clean |
 | Types | `.venv/bin/basedpyright` | 0 errors, 0 warnings |
 | Adversarial abstention | `PYTHONPATH=. .venv/bin/python benchmarks/evaluator/synthetic_abstention_runner.py` | GREEN, 0 LLM calls |
@@ -26,7 +26,11 @@ truth, not the number in this table.
 - The v2 tool model: `tool`, `baseline`, `signals`, and `checks` in one YAML
   file. The legacy v1 loader remains only for internal benchmark fixtures.
 - The UI: six result words, differential table, bounded Nemotron calls,
-  Tavily research on uncertain results, and a collapsed technical audit.
+  Tavily research on uncertain results, a collapsed technical audit, and live
+  per-model/Tavily usage counters.
+- Two model roles: `nvidia/Nemotron-3-Ultra-550b-a55b` for unknown-machine
+  mapping and `nvidia/Nemotron-3_5-Lightning` for cause finding, challenge, and
+  explanation.
 - The offline demo: same engine and UI with deterministic fixture transports.
 - The fair-benchmark runner and the committed `2026-10-28` artifacts in
   `benchmarks/evaluator/results/naive_llm/2026-10-28/`.

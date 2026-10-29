@@ -18,6 +18,7 @@ from urllib.error import URLError
 from urllib.request import Request, urlopen
 
 from src.core.types import Evidence, EvidenceKind
+from src.usage import USAGE
 
 TAVILY_ENDPOINT = "https://api.tavily.com/search"
 TAVILY_API_KEY_ENV = "TAVILY_API_KEY"
@@ -77,6 +78,11 @@ class TavilyClient:
             raise TavilyError("Tavily query is empty")
         if isinstance(max_results, bool) or not 1 <= max_results <= _MAX_RESULTS:
             raise TavilyError(f"max_results must be between 1 and {_MAX_RESULTS}")
+        USAGE.record(
+            provider="Tavily",
+            model="tavily-search",
+            role="RESEARCH",
+        )
         body = json.dumps(
             {
                 "api_key": self._api_key,

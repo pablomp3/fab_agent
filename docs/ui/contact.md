@@ -16,6 +16,11 @@
 - **License:** Apache 2.0
 - **Issues and technical feedback:** [github.com/pablomp3/fab_agent/issues](https://github.com/pablomp3/fab_agent/issues)
 
+## Builder
+
+- **Personal site:** [pablomp3.github.io](https://pablomp3.github.io/)
+- **LinkedIn:** [linkedin.com/in/pablomp3](https://www.linkedin.com/in/pablomp3/)
+
 ---
 
 ## Demo and video

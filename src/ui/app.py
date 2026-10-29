@@ -37,9 +37,10 @@ from src.demo_data import (
     GeneratedDataset,
     generate_demo_csv,
 )
-from src.model_config import ModelConfigurationError
+from src.model_config import ModelConfigurationError, load_model_route
 from src.ui import config_promotion, presentation
 from src.ui.presentation import RESULT_GLOSSARY, TERM_GLOSSARY
+from src.usage import USAGE
 
 # Do not reload ``presentation`` here. Streamlit reruns this script, but
 # reloading a module that imports new schema classes can fail while an older
@@ -53,6 +54,7 @@ _PERFORMANCE_DOC = _DOCS / "performance.md"
 _CONTACT_DOC = _DOCS / "contact.md"
 _VERDICTS_DOC = _DOCS / "verdicts.md"
 _YAML_DOC = _DOCS / "yaml_guide.md"
+_MODELS_CONFIG = Path(__file__).resolve().parents[2] / "config" / "models.yaml"
 _RESULTS_DIR = (
     Path(__file__).resolve().parents[2] / "benchmarks" / "evaluator" / "results"
 )
@@ -134,6 +136,61 @@ _ROLE_LABELS = {
 
 def _table(rows: Sequence[Mapping[str, object]]) -> None:
     st.markdown(presentation.markdown_table([dict(row) for row in rows]))
+
+
+def _configured_model_id(role: str) -> str:
+    try:
+        return load_model_route(_MODELS_CONFIG, role).model
+    except (OSError, ValueError):
+        return "configured in config/models.yaml"
+
+
+def _usage_baseline() -> dict[tuple[str, str, str], int]:
+    stored = st.session_state.get("usage_baseline")
+    if isinstance(stored, dict):
+        return cast(dict[tuple[str, str, str], int], stored)
+    baseline = {
+        (item.provider, item.model, item.role): item.calls
+        for item in USAGE.snapshot()
+    }
+    st.session_state["usage_baseline"] = baseline
+    return baseline
+
+
+class _UsageRow(TypedDict):
+    provider: str
+    model: str
+    role: str
+    session_calls: int
+    server_calls: int
+    short: str
+
+
+def _usage_rows() -> list[_UsageRow]:
+    baseline = _usage_baseline()
+    rows: list[_UsageRow] = []
+    for item in USAGE.snapshot():
+        key = (item.provider, item.model, item.role)
+        session_calls = max(0, item.calls - baseline.get(key, 0))
+        if item.provider == "Tavily":
+            short = "Tavily"
+        elif item.role == "MAPPING":
+            short = "Nemotron (mapping)"
+        elif item.role == "SYNTHESIS":
+            short = "Nemotron (synthesis)"
+        else:
+            short = item.role.title()
+        rows.append(
+            {
+                "provider": item.provider,
+                "model": item.model,
+                "role": item.role,
+                "session_calls": session_calls,
+                "server_calls": item.calls,
+                "short": short,
+            }
+        )
+    return rows
 
 
 def _callout(tone: presentation.OutcomeTone, message: str) -> None:
@@ -1706,6 +1763,23 @@ def _render_sidebar(live_configured: bool, tavily_configured: bool) -> None:
             "Finds public troubleshooting references when the data is uncertain."
         )
 
+        st.markdown("### Live usage")
+        usage = _usage_rows()
+        if usage:
+            session_total = sum(row["session_calls"] for row in usage)
+            server_total = sum(row["server_calls"] for row in usage)
+            st.caption(
+                f"{session_total} call(s) this session · {server_total} since "
+                "server start"
+            )
+            for row in usage:
+                st.caption(
+                    f"{row['short']}: {row['session_calls']} this session "
+                    f"· {row['server_calls']} total"
+                )
+        else:
+            st.caption("No live calls yet. Offline fixture runs are not counted.")
+
         st.divider()
         st.markdown("### Deterministic decision layer")
         st.caption(":green[● Python + DuckDB · always on]")
@@ -1801,19 +1875,58 @@ def _page_models() -> None:
     st.subheader("Current server configuration")
     rows: list[dict[str, object]] = [
         {
-            "Layer": "NVIDIA Nemotron (Nebius Token Factory)",
-            "Role": "Mapping, cause finding, challenge, explanation",
+            "Layer": "NVIDIA Nemotron — unknown-machine mapping",
+            "Model / service": _configured_model_id("MAPPING"),
+            "Role": "Proposes column roles for an unseen export",
+        },
+        {
+            "Layer": "NVIDIA Nemotron — cause finder, challenge, explanation",
+            "Model / service": _configured_model_id("SYNTHESIS"),
+            "Role": "Bounded reasoning over the Python evidence",
         },
         {
             "Layer": "Tavily research",
-            "Role": "Public troubleshooting leads on uncertain results",
+            "Model / service": "Tavily Search API",
+            "Role": "Public leads on uncertain results; never evidence",
         },
         {
-            "Layer": "Python + DuckDB",
-            "Role": "Deterministic decision, coverage, and safe action",
+            "Layer": "Deterministic decision",
+            "Model / service": "Python + DuckDB",
+            "Role": "Coverage, contradictions, result, and safe action",
         },
     ]
     _table(rows)
+    st.caption(
+        "Exact model IDs are read from `config/models.yaml`; environment "
+        "overrides are reflected here."
+    )
+
+    st.subheader("Live runtime usage")
+    st.caption(
+        "Only real Nebius Token Factory and Tavily HTTP calls are counted. "
+        "Offline fixture runs are not counted. Server total includes every "
+        "session since the process started."
+    )
+    usage = _usage_rows()
+    if usage:
+        _table(
+            [
+                {
+                    "Provider": row["provider"],
+                    "Model / service": row["model"],
+                    "Role": row["role"],
+                    "This session": row["session_calls"],
+                    "Server total": row["server_calls"],
+                }
+                for row in usage
+            ]
+        )
+    else:
+        st.info(
+            "No live calls in this process yet. Run a case with a server key to "
+            "populate the counter."
+        )
+
     st.divider()
     st.subheader("The tool model an engineer edits")
     _render_markdown_file(_YAML_DOC)
