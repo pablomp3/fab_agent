@@ -166,6 +166,33 @@ class _UsageRow(TypedDict):
     short: str
 
 
+def _usage_inline(row: _UsageRow) -> str:
+    is_search = row["provider"] == "Tavily"
+    unit = "search" if is_search else "call"
+    singular = row["session_calls"] == 1
+    plural = "" if singular else ("es" if is_search else "s")
+    return (
+        f":green[**{row['session_calls']} {unit}{plural}**] "
+        f":gray[**({row['server_calls']} total)**]"
+    )
+
+
+def _usage_for(
+    rows: Sequence[_UsageRow], provider: str, role: str
+) -> _UsageRow:
+    for row in rows:
+        if row["provider"] == provider and row["role"] == role:
+            return row
+    return {
+        "provider": provider,
+        "model": role,
+        "role": role,
+        "session_calls": 0,
+        "server_calls": 0,
+        "short": role.title(),
+    }
+
+
 def _usage_rows() -> list[_UsageRow]:
     baseline = _usage_baseline()
     counts = {
@@ -1753,44 +1780,32 @@ def _render_sidebar(live_configured: bool, tavily_configured: bool) -> None:
 
         st.divider()
         st.markdown("### AI reasoning layer")
-        st.markdown("**NVIDIA Nemotron**")
         if live_configured:
             st.caption(":green[● Live on Nebius Token Factory]")
         else:
             st.caption(
                 ":orange[● Offline fixture · no server key in this environment]"
             )
-        st.caption(
-            "Maps unknown columns · proposes causes · challenges the leader · "
-            "writes the explanation."
-        )
-        st.caption(
-            "Mapping: Nemotron 3 Ultra · Reasoning: Nemotron 3.5 Lightning"
-        )
+        usage = _usage_rows()
+        mapping = _usage_for(usage, "Nebius Token Factory", "MAPPING")
+        synthesis = _usage_for(usage, "Nebius Token Factory", "SYNTHESIS")
+        tavily = _usage_for(usage, "Tavily", "RESEARCH")
 
-        st.markdown("**Tavily research**")
+        st.markdown(
+            f":violet[**NVIDIA Nemotron 3 Ultra**] · {_usage_inline(mapping)}"
+        )
+        st.caption("Unknown-machine mapping")
+        st.markdown(
+            f":blue[**NVIDIA Nemotron 3.5 Lightning**] · "
+            f"{_usage_inline(synthesis)}"
+        )
+        st.caption("Cause finding, challenge, explanation")
+        st.markdown(f":orange[**Tavily research**] · {_usage_inline(tavily)}")
         if tavily_configured:
             st.caption(":green[● Live for uncertain results]")
         else:
             st.caption(":gray[● No server key · external leads skipped]")
-        st.caption(
-            "Finds public troubleshooting references when the data is uncertain."
-        )
-
-        st.markdown("### Live usage")
-        usage = _usage_rows()
-        session_total = sum(row["session_calls"] for row in usage)
-        server_total = sum(row["server_calls"] for row in usage)
-        st.caption(
-            f"{session_total} call(s) this session · {server_total} since "
-            "server start"
-        )
-        for row in usage:
-            st.caption(
-                f"{row['short']}: {row['session_calls']} this session "
-                f"· {row['server_calls']} total"
-            )
-        st.caption("Offline fixture runs are not counted.")
+        st.caption("Live calls only; offline fixture runs are not counted.")
 
         st.divider()
         st.markdown("### Deterministic decision layer")
@@ -1885,52 +1900,42 @@ def _page_models() -> None:
 
     st.divider()
     st.subheader("Current server configuration")
+    usage = _usage_rows()
+    mapping = _usage_for(usage, "Nebius Token Factory", "MAPPING")
+    synthesis = _usage_for(usage, "Nebius Token Factory", "SYNTHESIS")
+    tavily = _usage_for(usage, "Tavily", "RESEARCH")
     rows: list[dict[str, object]] = [
         {
             "Layer": "NVIDIA Nemotron — unknown-machine mapping",
             "Model / service": _configured_model_id("MAPPING"),
             "Role": "Proposes column roles for an unseen export",
+            "Calls": _usage_inline(mapping),
         },
         {
             "Layer": "NVIDIA Nemotron — cause finder, challenge, explanation",
             "Model / service": _configured_model_id("SYNTHESIS"),
             "Role": "Bounded reasoning over the Python evidence",
+            "Calls": _usage_inline(synthesis),
         },
         {
             "Layer": "Tavily research",
             "Model / service": "Tavily Search API",
             "Role": "Public leads on uncertain results; never evidence",
+            "Calls": _usage_inline(tavily),
         },
         {
             "Layer": "Deterministic decision",
             "Model / service": "Python + DuckDB",
             "Role": "Coverage, contradictions, result, and safe action",
+            "Calls": "—",
         },
     ]
     _table(rows)
     st.caption(
         "Exact model IDs are read from `config/models.yaml`; environment "
-        "overrides are reflected here."
-    )
-
-    st.subheader("Live runtime usage")
-    st.caption(
-        "Only real Nebius Token Factory and Tavily HTTP calls are counted. "
-        "Offline fixture runs are not counted. Server total includes every "
-        "session since the process started."
-    )
-    usage = _usage_rows()
-    _table(
-        [
-            {
-                "Provider": row["provider"],
-                "Model / service": row["model"],
-                "Role": row["role"],
-                "This session": row["session_calls"],
-                "Server total": row["server_calls"],
-            }
-            for row in usage
-        ]
+        "overrides are reflected here. Calls are live HTTP calls only: offline "
+        "fixture runs are not counted, and server total includes every session "
+        "since the process started."
     )
 
     st.divider()

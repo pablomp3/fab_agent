@@ -74,9 +74,9 @@ Use plain role names, not “agent” jargon:
 
 In the result flow, use role names: “NVIDIA Nemotron: column mapper”, “NVIDIA
 Nemotron: cause finder”, etc. Show the exact model IDs only in the **How it
-works → Current server configuration** and **Live runtime usage** panels, where
-they are evidence of the real Nebius Token Factory integration. Do not clutter
-the result card with model IDs or API details.
+works → Current server configuration** table, where they are evidence of the
+real Nebius Token Factory integration. Do not clutter the result card with model
+IDs or API details.
 
 **Tavily** is the external research layer. In the UI: “Tavily research: public
 troubleshooting leads”. It runs on uncertain results only and never becomes

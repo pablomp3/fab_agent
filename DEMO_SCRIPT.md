@@ -138,17 +138,16 @@ Close the audit.
 
 **Page:** How it works
 
-**Show:** the flow diagram, **Current server configuration**, and **Live runtime
-usage**.
+**Show:** the flow diagram and **Current server configuration**.
 
 **Say:**
 
 > Nemotron has four bounded jobs. Unknown-machine mapping uses Nemotron 3 Ultra;
 > cause finding, challenge, and explanation use Nemotron 3.5 Lightning. Tavily
-> runs only when the result is uncertain. The usage table starts at zero and
-> counts the actual Nebius Token Factory and Tavily calls, not offline fixtures.
+> runs only when the result is uncertain. The call counts start at zero and count
+> the actual Nebius Token Factory and Tavily calls, not offline fixtures.
 
-Point to the exact model IDs and the per-model counts.
+Point to the exact model IDs and the inline counts next to each model.
 
 ---
 

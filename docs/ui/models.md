@@ -18,8 +18,9 @@ The hosted demo uses two exact models from Nebius Token Factory:
 | Cause finding, challenge, explanation | `nvidia/Nemotron-3_5-Lightning` |
 
 The larger Ultra model is reserved for the hard unknown-export mapping step;
-ordinary synthesis stays fast on Lightning. The **Live runtime usage** panel on
-the How it works page shows actual calls by model and by Tavily.
+ordinary synthesis stays fast on Lightning. The **Current server configuration**
+table on the How it works page shows the actual calls next to each model and
+Tavily.
 
 Every response is schema-validated. Python resolves every cited evidence ID;
 unresolved citations are discarded. A failed model call leaves the deterministic
