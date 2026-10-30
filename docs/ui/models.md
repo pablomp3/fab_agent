@@ -1,82 +1,82 @@
 # What each layer does
 
-## 1. NVIDIA Nemotron — AI reasoning
+## 1. Local triage — DuckDB + Python
 
-Nemotron has four bounded jobs:
+Local triage starts before any AI model is called. DuckDB reads the machine's
+sensor CSV locally on the server:
 
-- **Column mapper** — proposes what each column means for an unknown export.
-- **Cause finder** — proposes possible causes with evidence IDs.
-- **Challenge check** — proposes the strongest disconfirming test for the
-  leading cause.
-- **Explanation** — writes the plain-language summary.
+1. **Match or bootstrap** — if a saved **tool model** (a short YAML description
+   of the machine) matches the CSV columns, use it; otherwise switch to Auto
+   mode.
+2. **Normal reference** — for a saved tool model, compute the median and MAD
+   (median absolute deviation) over the machine's normal baseline window.
+3. **Evidence records** — emit one record per sensor (`EV_…`): unusual, normal,
+   or missing. In Auto mode, the local column profile is sent to the mapper
+   first; Python validates the proposed mapping before evidence is computed. Raw
+   sensor rows stay in DuckDB; only a bounded summary is sent to the model.
 
-The hosted demo uses two exact models from Nebius Token Factory:
+---
 
-| Job | Model |
+## 2. NVIDIA Nemotron — AI reasoning
+
+Nemotron runs on **Nebius Token Factory** and does the four jobs that fixed
+rules cannot do alone:
+
+- **Column mapper** (*Day 1 cold-start*) — guesses what each column means when
+  an engineer uploads a file from an unknown machine, and drafts a starter YAML
+  tool model.
+- **Cause finder** — proposes possible causes from the evidence IDs.
+- **Challenge check** (*red-team*) — proposes the strongest disconfirming test
+  for its own leading cause ("if this were really a coolant fault, which other
+  sensor should have moved?").
+- **Explanation** — writes the plain-language shift-handoff summary.
+
+| Job | Model on Nebius Token Factory |
 |---|---|
 | Unknown-machine column mapping | `nvidia/Nemotron-3-Ultra-550b-a55b` |
 | Cause finding, challenge, explanation | `nvidia/Nemotron-3_5-Lightning` |
 
-The larger Ultra model is reserved for the hard unknown-export mapping step;
-ordinary synthesis stays fast on Lightning. The **Current server configuration**
-table on the How it works page shows the actual calls next to each model and
-Tavily.
-
-Every response is schema-validated. Python resolves every cited evidence ID;
-unresolved citations are discarded. A failed model call leaves the deterministic
-result intact.
-
-### What the model sees
-
-A small statistical summary, under 2 KB: signal names and engineer labels,
-median/MAD-based robust z-scores, nominal/anomaly/missing flags, evidence IDs,
-and the engineer's short note. It never sees the raw CSV or the API key.
+The larger Ultra model is reserved for the one-shot unknown-machine mapping
+step; interactive steps stay fast on Lightning. Every response is
+schema-validated, and a failed model call leaves the Python result intact.
 
 ---
 
-## 2. Tavily — external research
+## 3. Python decision + Tavily research
 
-Tavily runs only when public engineering knowledge can help:
+Python makes the final call in a fixed sequence:
 
-- **When:** inconclusive, contradictory, or unknown-machine results.
-- **What it sends:** anomalous sensor labels or the suspected fault label — not
-  raw values, timestamps, or confidential notes.
-- **What it returns:** up to three public references. They are leads for a human,
-  never evidence for the gate.
+1. **Citation check** — re-resolve every `EV_…` ID the model cited; discard any
+   invented ID.
+2. **Coverage** — check whether every declared sensor is explained, normal, or
+   flagged.
+3. **Contradiction** — if a sensor that should agree stayed flat, stop at
+   **Sensors Disagree**.
+4. **Action** — pick one action from a fixed list: inspect the part, keep
+   monitoring, check the sensor, get more data, ask an engineer, or review the
+   guessed columns. Changing a **recipe** (machine settings) or holding a
+   **lot** (wafer batch) is not on that list.
+5. **Tavily research (only when unsure)** — when the result is inconclusive,
+   conflicting, or from an unknown machine, `build_tavily_query` sends human
+   sensor labels (for example `RF power`) and the fault name to Tavily. It
+   returns up to three public troubleshooting links as context for the engineer,
+   never as evidence for the decision.
 
----
+### The 3.5z alert level and 5z coverage rule
 
-## 3. Python + DuckDB — deterministic decision
-
-The decision runs as a short sequence:
-
-1. **Baseline** — a lead-in window or a saved normal run defines “normal”.
-2. **Evidence** — one record per declared signal: anomaly, nominal, or missing.
-3. **Coverage** — every declared signal is explained, nominal, or flagged.
-4. **Contradiction** — a signal that should agree did not; this is a hard stop.
-5. **Action** — a small typed enum: inspect, monitor, escalate, or collect data.
-
-### The 3.5z alert level
-
-Each signal is compared with the normal reference using the median and MAD:
+Each sensor is compared with its normal reference using the median and MAD:
 
 **z = 0.6745 × |value − median| / MAD**
 
-`0.6745 = Φ⁻¹(0.75)` converts MAD to normal-equivalent sigma units. **3.5z** is
-the editable per-signal alert level; **5z** is the coverage limit that blocks a
-bare **Fault Confirmed** when a large signal is unexplained. They are statistical
-screening levels, not physics tolerances; replace 3.5 with a calibrated limit
-when one exists.
-
-### Audit trail
-
-Every finding has an evidence ID. The technical audit shows the raw status,
-statistic, window, and bounded payload size. Unresolved model citations are
-rejected and listed there.
+`0.6745 = Φ⁻¹(0.75)` converts MAD to normal-equivalent standard deviations.
+**3.5z** is the editable per-sensor alert level; **5z** is the coverage rule
+that blocks a bare **Fault Confirmed** when another sensor has a large
+unexplained spike. They are statistical screening levels, not physical
+tolerances; replace 3.5 with a calibrated limit when one exists.
 
 ---
 
 ## 4. The engineer
 
-The engineer owns the saved tool model and the final action. The model cannot
-replace that judgement.
+The engineer owns the saved tool model and confirms the final action. The model
+cannot replace that judgement.

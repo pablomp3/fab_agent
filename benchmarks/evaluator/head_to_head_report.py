@@ -45,6 +45,14 @@ def _case_ids(payload: dict[str, object]) -> list[str]:
     return sorted(found)
 
 
+def _portable(path: Path) -> str:
+    """Return a repo-relative path so the committed artifact is portable."""
+    try:
+        return str(path.resolve().relative_to(ROOT))
+    except ValueError:
+        return str(path)
+
+
 def _track(payload: dict[str, object], source: Path) -> dict[str, object]:
     systems = payload.get("systems")
     if not isinstance(systems, list):
@@ -59,7 +67,7 @@ def _track(payload: dict[str, object], source: Path) -> dict[str, object]:
     return {
         "systems": labelled,
         "cases": payload.get("cases", []),
-        "source": str(source),
+        "source": _portable(source),
     }
 
 

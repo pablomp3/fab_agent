@@ -286,6 +286,24 @@ RESULT_GLOSSARY: list[tuple[str, str]] = [
 
 TERM_GLOSSARY: list[tuple[str, str]] = [
     (
+        "Fab & tool",
+        "A fab is a semiconductor factory where chips are made. A tool is one "
+        "machine inside the fab (for example an etcher, deposition chamber, or "
+        "ion mill) that streams dozens of sensor channels.",
+    ),
+    (
+        "Wafer, lot & scrap",
+        "A wafer is the thin silicon disc that hundreds of chips are built on. "
+        "Wafers move through the factory in batches called lots (typically 25 "
+        "wafers). If a faulty tool ruins a wafer, it is scrapped.",
+    ),
+    (
+        "Recipe",
+        "The exact step-by-step settings (temperatures, pressures, gas flows, RF "
+        "power) a tool uses to process a wafer. Changing a recipe on a false "
+        "alarm can ruin good wafers.",
+    ),
+    (
         "Robust z-score",
         "Peak deviation from normal: 0.6745 × |value − median| / MAD. 0.6745 is "
         "Φ⁻¹(0.75), the 75th percentile of the standard normal; for normal data "

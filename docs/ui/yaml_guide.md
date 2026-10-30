@@ -29,7 +29,9 @@ checks:
   - id: coolant_leak
     label: Coolant loop fault
     kind: equipment_fault
-    must_be_unusual: [FLOWCOOLFLOWRATE, FLOWCOOLPRESSURE]
+    must_be_unusual:
+      - {signal: FLOWCOOLFLOWRATE, direction: any}
+      - {signal: FLOWCOOLPRESSURE, direction: any}
     must_stay_normal: [IONGAUGEPRESSURE]
     action: INSPECT_COMPONENT
     advice: Inspect the coolant loop before changing the recipe.
@@ -38,7 +40,7 @@ checks:
 | Setting | What it does |
 | :--- | :--- |
 | `signals` | The columns to check. `label` is what the user sees; `alert_at` is the sensitivity (default `3.5`). |
-| `baseline` | What “normal” means: a lead-in, a separate normal file, or a recipe step. The normal view describes it in plain words, not as a path. |
+| `baseline` | What “normal” means: a lead-in or a separate normal file. `recipe_step` is accepted by the schema but currently fails closed; use `lead_in` or `nominal_file` today. The normal view describes it in plain words, not as a path. |
 | `checks` | The fault patterns. `must_be_unusual` must all move; `must_stay_normal` must all stay quiet; `action` is the suggested next step. |
 | `corroborated_by` | Optional. Signals that should move together with the primary signal. If they stay flat, the result is **Sensors Disagree**. |
 

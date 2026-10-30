@@ -1,10 +1,17 @@
 # FabAgent vs frontier LLM
 
-We compared FabAgent with Gemini 3.8 Flash (medium) and GPT-5.6 Luna on the same
-four completed cases. The first benchmark gives each model only the prompt and a
-bounded evidence summary. The second gives it the raw CSV as well. A third
-benchmark compares the full FabAgent workflow — saved tool-model checks plus the
-Python gate — with the same Nemotron model used without them. That third table is
-a workflow comparison, not a pure gate ablation.
+We compared FabAgent with **Gemini 3.8 Flash (medium)** and **GPT-5.6 Luna** on
+cases where the right answer is known in advance (an injected fault in a
+simulator, or a published fault label in a public dataset).
 
-The goal is simple: **safe decisions and the right cause, not confident prose.**
+- **Benchmark 1** gives each system the same neutral prompt and `< 2 KB`
+  evidence summary.
+- **Benchmark 2** attaches the raw CSV sensor log as well.
+- **Benchmark 3** compares FabAgent’s deterministic path — saved tool model plus
+  Python decision, with model calls replaced by a fixed offline fixture — against
+  Nemotron 3.5 Lightning zero-shot on the evidence alone. Because the zero-shot
+  arm does not receive the saved checks, Benchmark 3 is a **workflow
+  comparison**, not a pure gate ablation.
+
+The goal is simple: **safe decisions and the right cause — or an honest "not
+enough data" — rather than confident prose.**

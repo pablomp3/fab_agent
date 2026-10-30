@@ -193,7 +193,7 @@
           "why": "XMEAS(1) and XMEAS(7) are flagged as anomalies in window [7,30], with reported values 75.5964 and 240.1495 respectively, exceeding the stated threshold of 3.5. XMV(3) is flagged as nominal, with a reported value of 1.4562. The summary does not provide signal units, normalization details, sensor validity, equipment state, or process context sufficient to distinguish equipment fault, instrumentation fault, upstream process disturbance, process drift, or material issue. Escalate for human review and validation of signal definitions, sensor calibration, and relevant process history. Do not change the recipe or hold the lot based on this evidence alone."
         }
       ],
-      "source": "/home/pablo/code/nvidia/fab_agent/benchmarks/evaluator/results/naive_llm/2026-10-28/head_to_head/evidence/summary.json",
+      "source": "benchmarks/evaluator/results/naive_llm/2026-10-28/head_to_head/evidence/summary.json",
       "systems": [
         {
           "appropriate_abstention": 1.0,
@@ -407,7 +407,7 @@
           "why": "The 30-row export shows a distinct change in XMEAS(1), which starts near 0.25, then shifts to values fluctuating around zero from row 7 onward. XMEAS(7) exhibits a sustained upward trend, increasing from approximately 2704 to 2821. XMV(3) remains comparatively stable, settling near 24.5 after initially ranging from approximately 24.6 to 25.3. These patterns warrant investigation, but the export provides no engineering limits, signal definitions, timestamps, operating modes, alarm states, or independent reference measurements. The observed change in XMEAS(1) could reflect a process transition or instrumentation behavior, while the rise in XMEAS(7) could reflect process drift or another cause. The available evidence does not distinguish equipment_fault, instrumentation_fault, upstream_process, process_drift, or material_issue, and does not establish that the tool is healthy or faulty. Collect additional time-aligned telemetry, signal specifications and operating context before assigning a root cause. No recipe adjustment or lot hold is recommended without human review."
         }
       ],
-      "source": "/home/pablo/code/nvidia/fab_agent/benchmarks/evaluator/results/naive_llm/2026-10-28/head_to_head/raw/summary.json",
+      "source": "benchmarks/evaluator/results/naive_llm/2026-10-28/head_to_head/raw/summary.json",
       "systems": [
         {
           "appropriate_abstention": 1.0,

@@ -1,8 +1,13 @@
 # Evaluation — FabAgent vs naive LLMs
 
 **Goal:** show that FabAgent makes **safer decisions** than a raw LLM on the same
-telemetry, and that the improvement comes from the deterministic gate, not from
-a lucky model.
+machine sensor data (telemetry), and that the improvement comes from the
+engineer-authored **tool model** (the YAML description of the machine) plus the
+deterministic Python decision rules, not from a lucky model response.
+
+*(Glossary: a **fab** is a semiconductor factory; a **tool** is one machine in
+the fab; a **wafer** is the silicon disc chips are built on; a **lot** is a
+batch of ~25 wafers; a **recipe** is the machine's step-by-step settings.)*
 
 This replaces the old `docs/evaluation/naive_llm_benchmarks/` sheets. Those
 sheets named the scenario and the answer in the prompt, so they are not evidence.
@@ -345,18 +350,19 @@ The runner must:
 ## 7. Workflow comparison: saved checks plus the gate
 
 The strongest result is not “FabAgent beats Gemini”. It is the comparison between
-the full engineering workflow and the same model used zero-shot:
+FabAgent’s deterministic path and Nemotron used zero-shot:
 
-| System | Same model? | Same bounded evidence? | Saved tool-model checks? | Python gate? |
+| System | Model calls | Same bounded evidence? | Saved tool-model checks? | Python gate? |
 |---|---|---|---|---|
-| Nemotron-only | yes | yes | no | no |
-| **FabAgent** | yes | yes | **yes** | **yes** |
+| Nemotron-only | live | yes | no | no |
+| **FabAgent** | fixed offline fixture | yes | **yes** | **yes** |
 
 The committed run is a **workflow comparison**, not a pure gate ablation: the
-naive prompt receives the bounded evidence but not the saved checks. It can show
-that the full workflow is safer on the fixed case set; it cannot attribute the
-whole difference to the gate alone. To isolate the gate, add a checks-visible
-prompt arm and report both.
+naive prompt receives the bounded evidence but not the saved checks, while the
+FabAgent row is computed from the saved checks and the Python gate with model
+calls replaced by a fixed offline fixture. It can show that the saved-check path
+is safer on the fixed case set; it cannot attribute the whole difference to the
+gate alone. To isolate the gate, add a checks-visible prompt arm and report both.
 
 That is still the product thesis: **the model proposes; Python checks; the
 engineer decides.** Report this comparison next to the Gemini/ChatGPT rows, with
@@ -365,11 +371,12 @@ the protocol limitation visible.
 ## 8. Current status (honest)
 
 Known protocol limitation: the generated naive prompt gives the model the
-evidence but **not** the saved tool-model checks, while FabAgent's cause finder
-does see them. That makes the current table a **workflow comparison**
-(engineer-authored checks + gate vs. zero-shot model), not a pure gate ablation.
-For the ablation, use a checks-visible prompt or report both tracks. The runner
-and ground truth live in `benchmarks/evaluator/`.
+evidence but **not** the saved tool-model checks, while the FabAgent row is
+computed from the saved checks and the Python gate with model calls replaced by a
+fixed offline fixture. That makes the current table a **workflow comparison**
+(saved checks + gate vs. zero-shot model), not a pure gate ablation. For the
+ablation, use a checks-visible prompt or report both tracks. The runner and
+ground truth live in `benchmarks/evaluator/`.
 
 - The old Gemini/ChatGPT sheets are **invalid** (leaked prompts, hand-scored,
   inconsistent tool use). Do not quote their 100%/0% table.

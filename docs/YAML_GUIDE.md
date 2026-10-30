@@ -1,14 +1,18 @@
 # Tool model YAML
 
-A **tool model** is the one file an engineer edits. It answers three questions:
+A **tool model** is the one file an engineer edits to describe a factory
+machine (in a chip factory, or **fab**, each machine is called a **tool**). It
+answers three questions:
 
-1. **Which columns matter?** (`signals`)
+1. **Which sensor columns matter?** (`signals`)
 2. **What does normal look like?** (`baseline`)
 3. **Which patterns count as a fault, and what should we do?** (`checks`)
 
 Everything else — evidence IDs, predicates, z-scores, coverage — is computed by
 Python. The YAML does not contain a diagnosis narrative, a `candidate`, a
-`predicate` block, or a `rules` block.
+`predicate` block, or a `rules` block. Changing a **recipe** (the step-by-step
+settings a tool uses on a wafer) or holding a **lot** (a batch of ~25 wafers)
+is not an allowed action in this file.
 
 > **Safety:** a check can only produce an action that you wrote. A model-proposed
 > cause that is not in this file is shown as **Needs Review**, never as

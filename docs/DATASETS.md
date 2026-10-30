@@ -1,13 +1,15 @@
 # Datasets and samples
 
-FabAgent tests **reasoning patterns**, not a modern fab’s physics. The public
-datasets provide observations; the synthetic twin provides injected causal
-ground truth. Neither is field validation.
+FabAgent tests **reasoning patterns**, not a modern **fab’s** (chip factory’s)
+physics. The public datasets provide real or simulated machine sensor logs; the
+synthetic twin provides injected causal ground truth. Neither is field
+validation in a production fab.
 
 ## 1. PHM 2018 — Seagate ion mill
 
-- **What it is:** real ion-mill telemetry with a documented `Flowcool leak`
-  fault in run `01_M02_DC_01`.
+- **What it is:** real telemetry from an **ion mill** (a fab **tool** — a
+  machine that etches material off a silicon **wafer** with an ion beam) with a
+  documented `Flowcool leak` fault in run `01_M02_DC_01`.
 - **Use it for:** equipment-subsystem attribution (flowcool circuit) and
   contradiction handling.
 - **Do not use it for:** process-cause attribution or yield labels. Fault

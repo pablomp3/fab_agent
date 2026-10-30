@@ -25,9 +25,9 @@ the Python result still ran.
 
 ## What you will not see in the main result
 
-Internal debug labels. They live in the **Audit** tab, next to the raw evidence,
-for debugging and for a technical reviewer. The main result always uses one of
-the six plain words above.
+Internal debug labels. They live in the collapsed **Technical audit** expander,
+next to the raw evidence, for debugging and for a technical reviewer. The main
+result always uses one of the six plain words above.
 
 ## How to read the result
 
